@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: campus-page-generator
+    runtime: node
+    buildCommand: npm install && node generator.js
+    startCommand: node server/index.js
+    envVars:
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: DEEPSEEK_MODEL
+        value: deepseek-chat
+      - key: NODE_VERSION
+        value: 18
