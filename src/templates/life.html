@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${majorName} · 生命之页 | AI 生成示例</title>
+  <meta name="description" content="「对话即渲染」生成示例 · 生命柔和体：${department} · ${majorName}（${majorCode}）。含图像色彩揭示滑块、预约表单校验、本地名单、手风琴、柔光浮粒。" />
+  <link rel="preconnect" href="https://fonts.loli.net" />
+  <link rel="preconnect" href="https://gstatic.loli.net" crossorigin />
+  <link href="https://fonts.loli.net/css2?family=Nunito:wght@400;600;700;800;900&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root { --theme: ${themeColor}; --bg:#0a0f0d; --soft:#0f1613; --dim:#8ea29a; --ink:#eaf3ef; }
+    html { scroll-behavior: smooth; }
+    body { background: var(--bg); color: var(--ink); font-family:'Nunito','Noto Sans SC',system-ui,sans-serif; overflow-x:hidden; }
+    a:focus-visible, button:focus-visible, input:focus-visible { outline:2px solid var(--theme); outline-offset:3px; }
+    .blob { position:fixed; border-radius:50%; filter:blur(70px); opacity:.32; z-index:0; pointer-events:none;
+      background:radial-gradient(circle, var(--theme), transparent 70%); animation:float 14s ease-in-out infinite; }
+    @keyframes float { 0%,100%{ transform:translate(0,0) scale(1);} 50%{ transform:translate(30px,-26px) scale(1.12);} }
+    .card { background:var(--soft); border:1px solid color-mix(in srgb,var(--theme) 18%,transparent); border-radius:26px; }
+    /* 色彩揭示滑块 */
+    .ba { position:relative; border-radius:26px; overflow:hidden; aspect-ratio:16/9; cursor:ew-resize; user-select:none; }
+    .ba img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+    .ba .gray { filter:grayscale(1) brightness(.6); }
+    .ba .color { clip-path: inset(0 50% 0 0); }
+    .ba .handle { position:absolute; top:0; bottom:0; left:50%; width:2px; background:#fff; z-index:5; }
+    .ba .handle::after { content:'⇄'; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:38px; height:38px;
+      background:var(--theme); color:#06100c; border-radius:50%; display:grid; place-items:center; font-weight:900; }
+    .acc-body { max-height:0; overflow:hidden; transition:max-height .45s ease; }
+    .reveal { opacity:0; transform:translateY(24px); transition:opacity .8s, transform .8s; }
+    .reveal.in { opacity:1; transform:none; }
+    @media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto;} .blob{animation:none;} .reveal{opacity:1;transform:none;transition:none;} }
+  </style>
+</head>
+<body class="antialiased">
+  <div class="blob" style="width:420px;height:420px;top:-120px;left:-80px"></div>
+  <div class="blob" style="width:360px;height:360px;bottom:-120px;right:-60px;animation-delay:-7s"></div>
+
+  <div class="relative z-10">
+  <div class="text-center text-xs py-2 px-4" style="background:color-mix(in srgb,var(--theme) 12%,var(--bg));border-bottom:1px solid color-mix(in srgb,var(--theme) 22%,transparent)">
+    ❧ 这是「对话即渲染」生成的<span style="color:var(--theme)">生命柔和体示例</span> · <a href="/studio/" class="underline underline-offset-2">生成我自己的 →</a>
+  </div>
+
+  <header class="sticky top-0 z-50 px-6 h-14 flex items-center justify-between" style="background:rgba(10,15,13,.78);backdrop-filter:blur(8px)">
+    <span class="font-extrabold tracking-tight">${majorName}</span>
+    <nav class="flex gap-3 text-xs font-bold">
+      <a href="index.html" class="px-4 py-2 rounded-full" style="border:1px solid color-mix(in srgb,var(--theme) 30%,transparent)">← 画廊</a>
+      <a href="/studio/" class="px-4 py-2 rounded-full" style="background:var(--theme);color:#06100c">⚡ 开始生成</a>
+    </nav>
+  </header>
+
+  <!-- 英雄 + 色彩揭示 -->
+  <section class="max-w-5xl mx-auto px-6 pt-16 pb-10">
+    <p class="text-sm tracking-[0.3em] uppercase font-bold mb-4" style="color:var(--theme)">${department} · ${majorCode}</p>
+    <h1 class="font-black tracking-tight mb-5" style="font-size:clamp(2.8rem,8vw,5.6rem);line-height:1.02">${majorName}</h1>
+    <p class="text-lg mb-9 max-w-xl" style="color:var(--dim)">在生命与健康的尺度上工作，让科学带着温度。拖动下面的滑块，看见被照亮的不同。</p>
+    <div class="ba" id="ba">
+      <img class="gray" src="${heroImage}" alt="" onerror="this.style.display='none'" />
+      <img class="color" id="ba-color" src="${heroImage}" alt="${majorName}" onerror="this.style.display='none'" />
+      <div class="handle" id="ba-handle"></div>
+    </div>
+  </section>
+
+  <!-- 三张柔卡 -->
+  <section class="reveal max-w-5xl mx-auto px-6 py-12 grid md:grid-cols-3 gap-5">
+    <div class="card p-7"><div class="text-3xl mb-3">🌱</div><h3 class="font-extrabold text-lg mb-2">以人为本</h3><p class="text-sm" style="color:var(--dim)">一切研究与实践，最终都回到对生命的关怀与尊重。</p></div>
+    <div class="card p-7"><div class="text-3xl mb-3">🔬</div><h3 class="font-extrabold text-lg mb-2">严谨求证</h3><p class="text-sm" style="color:var(--dim)">从实验台到病床，每一步都需要证据与耐心。</p></div>
+    <div class="card p-7"><div class="text-3xl mb-3">🤝</div><h3 class="font-extrabold text-lg mb-2">长期主义</h3><p class="text-sm" style="color:var(--dim)">这是一条需要积累的路，回报也足够厚重而持久。</p></div>
+  </section>
+
+  <!-- 手风琴 -->
+  <section class="reveal max-w-3xl mx-auto px-6 py-12">
+    <h2 class="text-2xl md:text-3xl font-black mb-6">关心的问题</h2>
+    <div class="space-y-3">
+      <div class="card overflow-hidden"><button class="acc-head w-full text-left px-6 py-4 font-bold flex justify-between items-center">学习周期是不是很长？<span class="acc-sign" style="color:var(--theme)">＋</span></button><div class="acc-body"><p class="px-6 pb-5 text-sm" style="color:var(--dim)">相对较长，但每一年都在累积不可替代的专业壁垒，越往后越从容。</p></div></div>
+      <div class="card overflow-hidden"><button class="acc-head w-full text-left px-6 py-4 font-bold flex justify-between items-center">需要很强的记忆力吗？<span class="acc-sign" style="color:var(--theme)">＋</span></button><div class="acc-body"><p class="px-6 pb-5 text-sm" style="color:var(--dim)">理解比死记更重要。建立知识间的联系，记忆会自然发生。</p></div></div>
+      <div class="card overflow-hidden"><button class="acc-head w-full text-left px-6 py-4 font-bold flex justify-between items-center">未来去向有哪些？<span class="acc-sign" style="color:var(--theme)">＋</span></button><div class="acc-body"><p class="px-6 pb-5 text-sm" style="color:var(--dim)">临床、科研、公共健康、生物医药与相关产业，路径清晰而多元。</p></div></div>
+    </div>
+  </section>
+
+  <!-- 预约表单 + 本地名单 -->
+  <section id="apply" class="reveal max-w-3xl mx-auto px-6 py-12">
+    <h2 class="text-2xl md:text-3xl font-black mb-6">预约一次咨询</h2>
+    <div class="grid md:grid-cols-2 gap-6">
+      <div class="card p-7">
+        <input id="ap-name" placeholder="你的姓名" class="w-full mb-3 bg-transparent rounded-2xl px-4 py-3 text-sm" style="border:1px solid color-mix(in srgb,var(--theme) 25%,transparent)" />
+        <input id="ap-phone" inputmode="numeric" maxlength="11" placeholder="手机号（11 位）" class="w-full mb-1 bg-transparent rounded-2xl px-4 py-3 text-sm" style="border:1px solid color-mix(in srgb,var(--theme) 25%,transparent)" />
+        <p id="ap-hint" class="text-xs h-4 mb-3" style="color:var(--dim)">方便我们回访</p>
+        <button id="ap-submit" class="w-full rounded-2xl py-3 text-sm font-extrabold" style="background:var(--theme);color:#06100c">提交预约</button>
+      </div>
+      <div class="card p-7">
+        <p class="text-sm font-bold mb-3">已预约名单 <span class="text-xs font-normal" style="color:var(--dim)">(本地保存，刷新不丢)</span></p>
+        <ul id="ap-list" class="space-y-2 text-sm"></ul>
+      </div>
+    </div>
+    <div class="mt-12 text-center"><a href="index.html" class="text-sm font-bold" style="color:var(--dim)">← 返回示例画廊</a></div>
+  </section>
+
+  <footer class="text-center py-10 text-xs" style="color:var(--dim)">
+    © 2026 · ${majorName}（${department}）· 由「对话即渲染」生成器产出 · 交互均为原生 JS
+  </footer>
+  </div>
+
+  <!-- 弹窗 -->
+  <div id="modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-5">
+    <div id="modal-mask" class="absolute inset-0" style="background:rgba(3,8,6,.7);backdrop-filter:blur(4px)"></div>
+    <div class="card relative p-8 max-w-sm w-full text-center">
+      <div class="text-5xl mb-4">🌿</div>
+      <h3 id="modal-title" class="text-xl font-black mb-2">预约成功</h3>
+      <p id="modal-text" class="text-sm mb-6" style="color:var(--dim)"></p>
+      <button id="modal-close" class="rounded-2xl px-8 py-3 text-sm font-extrabold" style="background:var(--theme);color:#06100c">好的</button>
+    </div>
+  </div>
+
+  <script>
+  (function(){
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var KEY = 'demo-apply-' + document.title;
+    var $ = function(id){ return document.getElementById(id); };
+
+    var io = new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target);} }); }, { threshold:.12 });
+    document.querySelectorAll('.reveal').forEach(function(el){ io.observe(el); });
+
+    /* 色彩揭示滑块 */
+    var ba = $('ba'), color = $('ba-color'), handle = $('ba-handle');
+    function setBA(pct){ pct = Math.max(0, Math.min(100, pct)); color.style.clipPath = 'inset(0 ' + (100-pct) + '% 0 0)'; handle.style.left = pct + '%'; }
+    function moveFromEvent(e){ var r = ba.getBoundingClientRect(); var x = (e.touches ? e.touches[0].clientX : e.clientX) - r.left; setBA(x / r.width * 100); }
+    var dragging = false;
+    ba.addEventListener('pointerdown', function(e){ dragging = true; moveFromEvent(e); });
+    window.addEventListener('pointermove', function(e){ if(dragging) moveFromEvent(e); });
+    window.addEventListener('pointerup', function(){ dragging = false; });
+    setBA(50);
+
+    /* 手风琴 */
+    document.querySelectorAll('.acc-head').forEach(function(head){
+      head.addEventListener('click', function(){
+        var body = head.nextElementSibling, sign = head.querySelector('.acc-sign');
+        var open = body.style.maxHeight && body.style.maxHeight !== '0px';
+        document.querySelectorAll('.acc-body').forEach(function(b){ b.style.maxHeight='0px'; });
+        document.querySelectorAll('.acc-sign').forEach(function(s){ s.textContent='＋'; });
+        if(!open){ body.style.maxHeight = body.scrollHeight + 'px'; if(sign) sign.textContent='－'; }
+      });
+    });
+
+    /* 弹窗 */
+    var modal = $('modal');
+    function openModal(t){ $('modal-text').textContent = t; modal.classList.remove('hidden'); }
+    $('modal-close').addEventListener('click', function(){ modal.classList.add('hidden'); });
+    $('modal-mask').addEventListener('click', function(){ modal.classList.add('hidden'); });
+
+    /* 预约表单 + 本地名单 */
+    var name = $('ap-name'), phone = $('ap-phone'), hint = $('ap-hint'), list = $('ap-list');
+    var RE = /^1[3-9]\d{9}$/;
+    function load(){ try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch(_) { return []; } }
+    function save(a){ localStorage.setItem(KEY, JSON.stringify(a)); }
+    function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]; }); }
+    function render(){
+      var a = load();
+      list.innerHTML = a.length ? a.map(function(it,i){ return '<li class="flex justify-between items-center px-3 py-2 rounded-xl" style="background:rgba(255,255,255,.03)"><span>'+esc(it.n)+' <span style="color:var(--dim)">· '+esc(it.t)+'</span></span><button data-i="'+i+'" style="color:var(--dim)">✕</button></li>'; }).join('') : '<li style="color:var(--dim)">还没有人预约</li>';
+      list.querySelectorAll('[data-i]').forEach(function(b){ b.addEventListener('click', function(){ var a=load(); a.splice(+b.getAttribute('data-i'),1); save(a); render(); }); });
+    }
+    phone.addEventListener('input', function(){
+      phone.value = phone.value.replace(/\D/g,'').slice(0,11);
+      if(!phone.value){ hint.textContent='方便我们回访'; hint.style.color='var(--dim)'; }
+      else if(RE.test(phone.value)){ hint.textContent='手机号格式正确 ✓'; hint.style.color='#34d399'; }
+      else { hint.textContent='手机号格式不正确'; hint.style.color='#fbbf24'; }
+    });
+    $('ap-submit').addEventListener('click', function(){
+      if(!name.value.trim()){ name.focus(); openModal('请先填写你的姓名。'); return; }
+      if(!RE.test(phone.value)){ phone.focus(); hint.textContent='请填写正确的 11 位手机号'; hint.style.color='#fbbf24'; return; }
+      var a = load(); a.unshift({ n:name.value.trim(), t:new Date().toLocaleDateString('zh-CN') }); save(a); render();
+      name.value=''; phone.value=''; hint.textContent='方便我们回访'; hint.style.color='var(--dim)';
+      openModal('已记录你的预约，我们会尽快与你联系（信息保存在本机）。');
+    });
+    render();
+  })();
+  </script>
+</body>
+</html>

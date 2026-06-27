@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${majorName} · 数据简报 | AI 生成示例</title>
+  <meta name="description" content="「对话即渲染」生成示例 · 财经数据体：${department} · ${majorName}（${majorCode}）。含数字滚动、视角切换对比表、就业占比条形图、校友轮播。" />
+  <link rel="preconnect" href="https://fonts.loli.net" />
+  <link rel="preconnect" href="https://gstatic.loli.net" crossorigin />
+  <link href="https://fonts.loli.net/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root { --theme: ${themeColor}; --bg:#0a0c10; --panel:#10141b; --line:#1e2530; --dim:#8b95a7; --ink:#eef2f7; }
+    html { scroll-behavior: smooth; }
+    body { background: var(--bg); color: var(--ink); font-family: 'Space Grotesk','Noto Sans SC',system-ui,sans-serif; }
+    .mono { font-family: 'IBM Plex Mono', monospace; }
+    a:focus-visible, button:focus-visible { outline: 2px solid var(--theme); outline-offset: 2px; }
+    .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; }
+    .grid-bg { background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px); background-size: 44px 44px; opacity:.5; }
+    .bar { height: 100%; width: 0; background: var(--theme); border-radius: 999px; transition: width 1.1s cubic-bezier(.16,1,.3,1); }
+    .seg { transition: all .2s; }
+    .seg.on { background: var(--theme); color: #06080c; }
+    .slide { transition: opacity .5s; }
+    .reveal { opacity: 0; transform: translateY(22px); transition: opacity .7s, transform .7s; }
+    .reveal.in { opacity: 1; transform: none; }
+    @media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto;} .reveal{opacity:1;transform:none;transition:none;} .bar{transition:none;} }
+  </style>
+</head>
+<body class="antialiased">
+  <div class="text-center text-xs py-2 px-4 mono" style="background:color-mix(in srgb,var(--theme) 12%,var(--bg));border-bottom:1px solid var(--line)">
+    ▣ 这是「对话即渲染」生成的<span style="color:var(--theme)">财经数据体示例</span> · <a href="/studio/" class="underline underline-offset-2">生成我自己的 →</a>
+  </div>
+
+  <header class="sticky top-0 z-50" style="background:rgba(10,12,16,.8);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)">
+    <div class="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
+      <span class="mono text-sm font-semibold tracking-tight">${majorName} <span style="color:var(--dim)">/ ${majorCode}</span></span>
+      <nav class="flex gap-3 text-xs">
+        <a href="index.html" class="px-3 py-1.5 rounded-md border" style="border-color:var(--line)">← 画廊</a>
+        <a href="/studio/" class="px-3 py-1.5 rounded-md font-bold" style="background:var(--theme);color:#06080c">⚡ 开始生成</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- 英雄 -->
+  <section class="relative overflow-hidden">
+    <div class="absolute inset-0 grid-bg"></div>
+    <div class="absolute inset-0" style="background:radial-gradient(60% 50% at 50% 0%, color-mix(in srgb,var(--theme) 22%,transparent), transparent 70%)"></div>
+    <div class="relative max-w-6xl mx-auto px-6 pt-20 pb-12">
+      <p class="mono text-xs tracking-[0.3em] uppercase mb-4" style="color:var(--theme)">${department} · Data Brief 2026</p>
+      <h1 class="font-black tracking-tighter" style="font-size:clamp(2.6rem,7vw,5rem);line-height:1.02">${majorName}</h1>
+      <p class="mt-5 max-w-xl text-lg" style="color:var(--dim)">用数据看懂一个专业：培养结构、能力配比与毕业去向，一屏读完。</p>
+
+      <!-- 数字滚动统计 -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-10">
+        <div class="panel p-5"><div class="mono text-3xl font-bold" data-count="96"  data-suffix="%">0</div><div class="text-xs mt-1" style="color:var(--dim)">毕业去向落实率</div></div>
+        <div class="panel p-5"><div class="mono text-3xl font-bold" data-count="32"  data-suffix="+">0</div><div class="text-xs mt-1" style="color:var(--dim)">核心课程门数</div></div>
+        <div class="panel p-5"><div class="mono text-3xl font-bold" data-count="18"  data-suffix="家">0</div><div class="text-xs mt-1" style="color:var(--dim)">合作实习单位</div></div>
+        <div class="panel p-5"><div class="mono text-3xl font-bold" data-count="4"   data-suffix="年">0</div><div class="text-xs mt-1" style="color:var(--dim)">标准学制</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 视角切换对比表 -->
+  <section class="reveal max-w-6xl mx-auto px-6 py-16">
+    <div class="flex flex-wrap items-end justify-between gap-4 mb-6">
+      <div><p class="mono text-xs tracking-[0.25em] uppercase" style="color:var(--theme)">Pathways</p><h2 class="text-2xl md:text-3xl font-bold mt-1">两条发展路径</h2></div>
+      <div class="inline-flex rounded-lg p-1 mono text-sm" style="background:var(--panel);border:1px solid var(--line)">
+        <button class="seg on px-4 py-2 rounded-md" data-view="0">就业向</button>
+        <button class="seg px-4 py-2 rounded-md" data-view="1">深造向</button>
+      </div>
+    </div>
+    <div class="panel overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="mono" style="color:var(--dim);background:#0c1016"><tr><th class="text-left px-5 py-3">维度</th><th class="text-left px-5 py-3">本路径侧重</th><th class="text-left px-5 py-3 w-28">强度</th></tr></thead>
+        <tbody id="cmp"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 就业占比条形图 -->
+  <section class="reveal max-w-6xl mx-auto px-6 py-10">
+    <p class="mono text-xs tracking-[0.25em] uppercase" style="color:var(--theme)">Destinations</p>
+    <h2 class="text-2xl md:text-3xl font-bold mt-1 mb-8">毕业去向占比</h2>
+    <div id="chart" class="space-y-5"></div>
+  </section>
+
+  <!-- 校友轮播 -->
+  <section class="reveal max-w-6xl mx-auto px-6 py-16">
+    <p class="mono text-xs tracking-[0.25em] uppercase" style="color:var(--theme)">Voices</p>
+    <h2 class="text-2xl md:text-3xl font-bold mt-1 mb-6">校友说</h2>
+    <div class="panel p-8 relative min-h-[9rem]">
+      <div id="testi"></div>
+      <div class="flex gap-2 mt-6" id="testi-dots"></div>
+    </div>
+    <div class="mt-12 text-center"><a href="index.html" class="mono text-sm" style="color:var(--dim)">← 返回示例画廊</a></div>
+  </section>
+
+  <footer class="text-center py-10 text-xs mono" style="color:var(--dim);border-top:1px solid var(--line)">
+    © 2026 · ${majorName}（${department}）· 由「对话即渲染」生成器产出 · 数据为示意
+  </footer>
+
+  <script>
+  (function(){
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var theme = getComputedStyle(document.documentElement).getPropertyValue('--theme').trim();
+
+    var io = new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target);} }); }, { threshold:.12 });
+    document.querySelectorAll('.reveal').forEach(function(el){ io.observe(el); });
+
+    /* 数字滚动 */
+    function rollUp(el){
+      var target = +el.getAttribute('data-count'), suf = el.getAttribute('data-suffix') || '', t0 = null, dur = 1100;
+      if (reduce){ el.textContent = target + suf; return; }
+      function step(ts){ if(!t0) t0 = ts; var p = Math.min((ts - t0)/dur, 1); el.textContent = Math.round(target * (1 - Math.pow(1-p,3))) + suf; if(p<1) requestAnimationFrame(step); }
+      requestAnimationFrame(step);
+    }
+    var countIO = new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting){ rollUp(e.target); countIO.unobserve(e.target);} }); }, { threshold:.6 });
+    document.querySelectorAll('[data-count]').forEach(function(el){ countIO.observe(el); });
+
+    /* 视角切换对比表 */
+    var VIEWS = [
+      [['核心能力','行业实务、数据分析、沟通协调',82],['典型出路','企业管培、咨询、运营、市场',88],['关键证书','行业资格 / 数据工具认证',70],['实习强度','大三起进入对口企业轮岗',90]],
+      [['核心能力','理论建模、研究方法、学术写作',86],['典型出路','保研考研、海外深造、研究岗',80],['关键证书','科研训练计划 / 论文产出',75],['实习强度','进入导师课题组参与项目',68]]
+    ];
+    var cmp = document.getElementById('cmp');
+    function renderCmp(v){
+      cmp.innerHTML = VIEWS[v].map(function(r){
+        return '<tr style="border-top:1px solid var(--line)"><td class="px-5 py-3 font-semibold">'+r[0]+'</td><td class="px-5 py-3" style="color:#c3cad6">'+r[1]+'</td>'
+          +'<td class="px-5 py-3"><div style="height:8px;background:#0c1016;border-radius:999px;overflow:hidden"><div class="bar" style="width:'+r[2]+'%"></div></div></td></tr>';
+      }).join('');
+    }
+    document.querySelectorAll('.seg').forEach(function(b){
+      b.addEventListener('click', function(){
+        document.querySelectorAll('.seg').forEach(function(s){ s.classList.remove('on'); });
+        b.classList.add('on'); renderCmp(+b.getAttribute('data-view'));
+      });
+    });
+    renderCmp(0);
+
+    /* 条形图 */
+    var DATA = [['对口行业就业',46],['继续深造（保研/考研/出国）',31],['公共部门与事业单位',13],['创业与自由职业',10]];
+    var chart = document.getElementById('chart');
+    chart.innerHTML = DATA.map(function(d){
+      return '<div><div class="flex justify-between text-sm mb-2"><span>'+d[0]+'</span><span class="mono" style="color:var(--theme)">'+d[1]+'%</span></div>'
+        +'<div style="height:12px;background:var(--panel);border:1px solid var(--line);border-radius:999px;overflow:hidden"><div class="bar" data-w="'+d[1]+'"></div></div></div>';
+    }).join('');
+    var chartIO = new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting){ e.target.querySelectorAll('.bar').forEach(function(b){ b.style.width = b.getAttribute('data-w')+'%'; }); chartIO.unobserve(e.target);} }); }, { threshold:.4 });
+    chartIO.observe(chart);
+
+    /* 校友轮播 */
+    var TS = [
+      ['"在这里学会的不是某个工具，而是把复杂问题拆成可执行步骤的习惯。"','2021 届 · 现就职于头部咨询'],
+      ['"数据课和实习让我提前看清了行业，求职时方向很明确。"','2022 届 · 互联网运营'],
+      ['"导师带着做的科研项目，成了我申请深造最有力的材料。"','2020 届 · 海外读研']
+    ];
+    var box = document.getElementById('testi'), dots = document.getElementById('testi-dots'), ti = 0;
+    function renderTesti(i){
+      box.innerHTML = '<p class="text-xl leading-relaxed">'+TS[i][0]+'</p><p class="mono text-sm mt-4" style="color:var(--dim)">'+TS[i][1]+'</p>';
+      Array.prototype.forEach.call(dots.children, function(d,idx){ d.style.background = idx===i ? theme : 'var(--line)'; });
+    }
+    TS.forEach(function(_,i){ var d=document.createElement('button'); d.style.cssText='width:28px;height:4px;border-radius:999px;background:var(--line)'; d.onclick=function(){ ti=i; renderTesti(ti); }; dots.appendChild(d); });
+    renderTesti(0);
+    if (!reduce) setInterval(function(){ ti=(ti+1)%TS.length; renderTesti(ti); }, 5000);
+  })();
+  </script>
+</body>
+</html>

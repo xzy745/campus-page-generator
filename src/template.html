@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${majorName} · AI 生成示例页</title>
+    <meta name="description" content="这是「对话即渲染」生成器产出的示例页面：${department} · ${majorName}（${majorCode}）。内含轮播以外的多种原生 JS 交互——选项卡、手风琴、表单校验、弹窗与本地持久化名单。" />
+    <link rel="preconnect" href="https://fonts.loli.net" />
+    <link rel="preconnect" href="https://gstatic.loli.net" crossorigin />
+    <link href="https://fonts.loli.net/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+    <style>
+        :root { --theme: ${themeColor}; }
+        html { scroll-behavior: smooth; }
+        body { font-family: 'Inter','Noto Sans SC','PingFang SC','HarmonyOS Sans SC','Microsoft YaHei',system-ui,sans-serif; }
+
+        /* 英雄底图：灰度 + 主题色淡染，统一成暗调 */
+        .hero-bg { background-image: url('${heroImage}'); background-size: cover; background-position: center; filter: grayscale(.7) brightness(.5); }
+        .hero-tint { background: var(--theme); mix-blend-mode: color; opacity: .4; }
+        .amb { background: radial-gradient(55% 45% at 50% 34%, var(--theme), transparent 70%); opacity: .16; }
+
+        .glow-btn { transition: all .4s cubic-bezier(.4,0,.2,1); }
+        .glow-btn:hover { box-shadow: 0 0 34px -4px var(--theme); transform: translateY(-2px); }
+        a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--theme); outline-offset: 3px; }
+
+        /* 鼠标跟随光效（showcase ⑦） */
+        #cursor-glow {
+            position: fixed; top: 0; left: 0; width: 360px; height: 360px;
+            margin-left: -180px; margin-top: -180px; /* 居中补偿，避免与 GSAP x/y 冲突 */
+            border-radius: 50%;
+            background: radial-gradient(circle, color-mix(in srgb, var(--theme) 22%, transparent), transparent 60%);
+            pointer-events: none; z-index: 60; opacity: 0;
+            will-change: transform;
+        }
+        /* 选项卡（showcase ⑥）/ 手风琴（⑧）/ 电梯导航激活点（⑨） */
+        .accordion-body { max-height: 0; overflow: hidden; transition: max-height .4s ease; }
+        .dot.active { transform: scale(1.7); }
+        /* 滚动渐入 */
+        .reveal { opacity: 0; transform: translateY(28px); transition: opacity .7s cubic-bezier(.16,1,.3,1), transform .7s cubic-bezier(.16,1,.3,1); }
+        .reveal.in { opacity: 1; transform: none; }
+
+        @media (prefers-reduced-motion: reduce) {
+            html { scroll-behavior: auto; }
+            .glow-btn { transition: none; }
+            #cursor-glow { display: none; }
+            .reveal { opacity: 1; transform: none; transition: none; }
+        }
+    </style>
+</head>
+<body class="bg-zinc-950 text-zinc-50 antialiased selection:bg-white selection:text-black">
+    <div id="cursor-glow" aria-hidden="true"></div>
+
+    <!-- 示例标识条：明确告诉访客"这是生成器产出的示例" -->
+    <div class="relative z-50 text-center text-xs py-2 px-4 font-mono tracking-wide border-b"
+         style="background: color-mix(in srgb, var(--theme) 12%, #09090b); border-color: color-mix(in srgb, var(--theme) 30%, transparent);">
+        ✨ 这是「对话即渲染」生成的<span class="font-bold" style="color: var(--theme)">示例页面</span> · 下面的交互全部是原生 JS ·
+        <a href="/studio/" class="underline underline-offset-2 hover:text-white">生成我自己的 →</a>
+    </div>
+
+    <!-- 统一顶部导航 -->
+    <header class="sticky top-0 z-50 bg-zinc-950/70 backdrop-blur border-b border-zinc-900">
+        <div class="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
+            <a href="examples.html" class="text-sm font-black tracking-tight">对话即渲染 · 示例</a>
+            <nav aria-label="站点导航" class="flex items-center gap-3 text-xs">
+                <a href="examples.html" class="px-3 py-1.5 rounded-full border border-zinc-700 hover:border-zinc-500 text-zinc-100 font-bold transition">← 示例画廊</a>
+                <a href="/studio/" class="px-3 py-1.5 rounded-full bg-indigo-500 hover:bg-indigo-400 text-white font-bold transition">⚡ 开始生成</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- 电梯导航（showcase ⑨） -->
+    <nav id="elevator" class="hidden lg:flex flex-col gap-3 fixed right-6 top-1/2 -translate-y-1/2 z-40" aria-label="页内快速定位">
+        <a data-target="top"     class="dot w-3 h-3 rounded-full bg-zinc-600 transition-all cursor-pointer" title="顶部"></a>
+        <a data-target="intro"   class="dot w-3 h-3 rounded-full bg-zinc-600 transition-all cursor-pointer" title="专业介绍"></a>
+        <a data-target="faq"     class="dot w-3 h-3 rounded-full bg-zinc-600 transition-all cursor-pointer" title="常见问题"></a>
+        <a data-target="signup"  class="dot w-3 h-3 rounded-full bg-zinc-600 transition-all cursor-pointer" title="报名"></a>
+        <a data-target="roster"  class="dot w-3 h-3 rounded-full bg-zinc-600 transition-all cursor-pointer" title="名单"></a>
+    </nav>
+
+    <!-- 英雄 -->
+    <section id="top" class="relative min-h-screen flex items-center justify-center overflow-hidden">
+        <div class="absolute inset-0 hero-bg z-0"></div>
+        <div class="absolute inset-0 hero-tint z-10"></div>
+        <div class="absolute inset-0 amb z-10"></div>
+        <div class="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/55 to-zinc-950/30 z-20"></div>
+
+        <div class="relative z-30 text-center px-5 max-w-4xl">
+            <span class="inline-block text-xs tracking-[0.3em] uppercase font-mono mb-6 px-4 py-1.5 rounded-full border"
+                  style="color: var(--theme); border-color: color-mix(in srgb, var(--theme) 45%, transparent);">
+                ${department} · CODE ${majorCode}
+            </span>
+            <h1 class="font-black tracking-tighter mb-7 text-white" style="font-size: clamp(2.8rem, 8vw, 6rem); line-height: 1.02;">${majorName}</h1>
+            <p class="text-base md:text-xl text-zinc-300 font-light max-w-2xl mx-auto mb-10 leading-relaxed">
+                探索 ${majorName} 的交叉地带——用专业定义未来，用热情链接同好。下滑体验这一页里手写的每一个交互。
+            </p>
+            <a href="#signup" class="glow-btn inline-block px-9 py-4 rounded-full font-bold tracking-widest text-sm text-zinc-950" style="background: var(--theme);">立即报名加入</a>
+        </div>
+
+        <div class="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 text-zinc-500 text-xs tracking-[0.3em]">SCROLL ↓</div>
+    </section>
+
+    <!-- 专业介绍 · 选项卡（showcase ⑥） -->
+    <section id="intro" class="reveal py-28 px-6 max-w-4xl mx-auto">
+        <span class="text-xs uppercase tracking-[0.25em] font-mono" style="color: var(--theme);">Tabs · 切换选项卡</span>
+        <h2 class="text-3xl md:text-4xl font-bold tracking-tight mt-3 mb-8">关于 ${majorName}</h2>
+        <div class="flex flex-wrap gap-2 mb-6 border-b border-zinc-800">
+            <button class="tab-btn px-5 py-3 text-sm font-semibold border-b-2 transition" data-tab="0" style="border-color: var(--theme); color: #fff;">培养目标</button>
+            <button class="tab-btn px-5 py-3 text-sm font-semibold border-b-2 border-transparent text-zinc-500 transition" data-tab="1">核心课程</button>
+            <button class="tab-btn px-5 py-3 text-sm font-semibold border-b-2 border-transparent text-zinc-500 transition" data-tab="2">就业方向</button>
+        </div>
+        <div class="tab-panel text-zinc-300 leading-relaxed" data-panel="0">面向 ${majorName} 领域，培养具备扎实理论基础与工程实践能力、能在本行业从事研发与创新的高素质复合型人才，强调跨学科视野与解决真实问题的能力。</div>
+        <div class="tab-panel hidden text-zinc-300 leading-relaxed" data-panel="1">围绕 ${department} 的知识体系，开设专业核心课、前沿选修与项目实训，理论与动手并重，并配套院系实验室与行业导师资源。</div>
+        <div class="tab-panel hidden text-zinc-300 leading-relaxed" data-panel="2">毕业生可进入对口行业的头部企业、研究机构与初创团队，覆盖研发、设计、管理与创业等方向，就业面广、成长通道清晰。</div>
+    </section>
+
+    <!-- 常见问题 · 手风琴（showcase ⑧） -->
+    <section id="faq" class="reveal py-20 px-6 max-w-3xl mx-auto">
+        <span class="text-xs uppercase tracking-[0.25em] font-mono" style="color: var(--theme);">Accordion · 手风琴</span>
+        <h2 class="text-3xl md:text-4xl font-bold tracking-tight mt-3 mb-8">常见问题</h2>
+        <div id="accordion" class="space-y-3">
+            <div class="accordion-item border border-zinc-800 rounded-xl overflow-hidden">
+                <button class="accordion-head w-full text-left px-5 py-4 font-semibold flex justify-between items-center hover:bg-zinc-900 transition">报名需要什么条件？<span class="acc-sign transition-transform" style="color: var(--theme)">+</span></button>
+                <div class="accordion-body"><p class="px-5 pb-4 text-zinc-400 text-sm">本校在读学生均可报名，无专业限制，欢迎跨专业同学加入 ${majorName} 相关社团与项目。</p></div>
+            </div>
+            <div class="accordion-item border border-zinc-800 rounded-xl overflow-hidden">
+                <button class="accordion-head w-full text-left px-5 py-4 font-semibold flex justify-between items-center hover:bg-zinc-900 transition">日常有哪些活动？<span class="acc-sign transition-transform" style="color: var(--theme)">+</span></button>
+                <div class="accordion-body"><p class="px-5 pb-4 text-zinc-400 text-sm">每学期有技术沙龙、竞赛集训、企业参访等活动，平均每月 2-3 场，注重把课堂所学落到真实项目里。</p></div>
+            </div>
+            <div class="accordion-item border border-zinc-800 rounded-xl overflow-hidden">
+                <button class="accordion-head w-full text-left px-5 py-4 font-semibold flex justify-between items-center hover:bg-zinc-900 transition">能获得哪些资源？<span class="acc-sign transition-transform" style="color: var(--theme)">+</span></button>
+                <div class="accordion-body"><p class="px-5 pb-4 text-zinc-400 text-sm">对接院系实验室、行业导师一对一指导，以及全国性赛事的报名与集训支持。</p></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 报名 · 正则校验（showcase ⑩）+ 成功弹窗（②） -->
+    <section id="signup" class="reveal py-20 px-6 max-w-md mx-auto">
+        <span class="text-xs uppercase tracking-[0.25em] font-mono" style="color: var(--theme);">Form · 正则校验 + 弹窗</span>
+        <h2 class="text-3xl md:text-4xl font-bold tracking-tight mt-3 mb-8">报名加入</h2>
+        <div class="bg-zinc-900 border border-zinc-800 rounded-3xl p-8">
+            <input id="su-name" placeholder="你的姓名" class="w-full mb-3 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:outline-none transition" style="--tw-ring-color: var(--theme)">
+            <input id="su-major" value="${majorName}" class="w-full mb-3 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-zinc-400 focus:outline-none transition">
+            <input id="su-phone" inputmode="numeric" maxlength="11" placeholder="手机号（11 位）" class="w-full mb-1 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:outline-none transition">
+            <p id="phone-hint" class="text-xs h-4 mb-3 text-zinc-500">请输入 11 位手机号</p>
+            <button id="btn-signup" class="w-full glow-btn rounded-xl py-3 text-sm font-bold text-zinc-950" style="background: var(--theme);">提交报名</button>
+        </div>
+    </section>
+
+    <!-- 报名名单 · 动态表格 + 本地持久化（showcase ⑤④） -->
+    <section id="roster" class="reveal py-20 px-6 max-w-3xl mx-auto">
+        <span class="text-xs uppercase tracking-[0.25em] font-mono" style="color: var(--theme);">Table · 动态表格（本地存储，刷新不丢）</span>
+        <h2 class="text-3xl md:text-4xl font-bold tracking-tight mt-3 mb-8">报名名单</h2>
+        <table class="w-full text-sm border border-zinc-800 rounded-xl overflow-hidden">
+            <thead class="bg-zinc-900 text-zinc-400">
+                <tr><th class="text-left px-4 py-3">姓名</th><th class="text-left px-4 py-3">意向</th><th class="text-left px-4 py-3">报名时间</th><th class="px-4 py-3 w-16">操作</th></tr>
+            </thead>
+            <tbody id="roster-body">
+                <tr id="roster-empty"><td colspan="4" class="text-center text-zinc-600 px-4 py-8">还没有人报名，去上面报一个吧</td></tr>
+            </tbody>
+        </table>
+        <div class="mt-14 text-center">
+            <a href="examples.html" class="text-sm text-zinc-500 hover:text-zinc-200 transition tracking-wider">← 返回示例画廊</a>
+        </div>
+    </section>
+
+    <!-- 通用弹窗（showcase ②） -->
+    <div id="modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-5">
+        <div id="modal-mask" class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+        <div class="relative bg-zinc-900 border border-zinc-700 rounded-3xl p-8 max-w-sm w-full text-center">
+            <div id="modal-icon" class="text-5xl mb-4">🎉</div>
+            <h3 id="modal-title" class="text-xl font-bold mb-2">报名成功</h3>
+            <p id="modal-text" class="text-zinc-400 text-sm mb-6">内容</p>
+            <button id="modal-close" class="glow-btn rounded-xl px-8 py-3 text-sm font-bold text-zinc-950" style="background: var(--theme);">知道了</button>
+        </div>
+    </div>
+
+    <footer class="border-t border-zinc-900 py-8 text-center text-zinc-600 text-xs">
+        © 2026 · ${majorName}（${department}）· 本页由「对话即渲染」生成器产出，交互均为原生 JS 手写
+    </footer>
+
+    <!-- 全部交互：原生 JS，单文件自包含（照搬自 /skills/ 互动演示并按本页 DOM 适配） -->
+    <script>
+    (function(){
+        var MAJOR = "${majorName}";
+        var STORE_KEY = "demo-roster-" + MAJOR;
+        var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        var $ = function(id){ return document.getElementById(id); };
+
+        /* ⑦ 鼠标跟随光效 —— GSAP quickTo 驱动，零 layout thrashing */
+        var glow = $('cursor-glow');
+        if (glow && !reduce && window.gsap) {
+            var gxTo = gsap.quickTo(glow, "x", { duration: 0.5, ease: "power3.out" });
+            var gyTo = gsap.quickTo(glow, "y", { duration: 0.5, ease: "power3.out" });
+            var goTo = gsap.quickTo(glow, "opacity", { duration: 0.25 });
+            document.addEventListener('mousemove', function(e){
+                gxTo(e.clientX);
+                gyTo(e.clientY);
+                goTo(1);
+            });
+            document.addEventListener('mouseleave', function(){ goTo(0); });
+        }
+
+        /* 滚动渐入：IntersectionObserver */
+        var io = new IntersectionObserver(function(entries){
+            entries.forEach(function(en){ if (en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); } });
+        }, { threshold: 0.12 });
+        document.querySelectorAll('.reveal').forEach(function(el){ io.observe(el); });
+
+        /* ⑥ 选项卡 */
+        var theme = getComputedStyle(document.documentElement).getPropertyValue('--theme').trim() || '#6366f1';
+        var tabBtns = document.querySelectorAll('.tab-btn');
+        var panels = document.querySelectorAll('.tab-panel');
+        tabBtns.forEach(function(btn){
+            btn.addEventListener('click', function(){
+                var i = btn.getAttribute('data-tab');
+                tabBtns.forEach(function(b){ b.style.borderColor = 'transparent'; b.style.color = ''; b.classList.add('text-zinc-500'); });
+                btn.style.borderColor = theme; btn.style.color = '#fff'; btn.classList.remove('text-zinc-500');
+                panels.forEach(function(p){ p.classList.toggle('hidden', p.getAttribute('data-panel') !== i); });
+            });
+        });
+
+        /* ⑧ 手风琴 */
+        document.querySelectorAll('.accordion-head').forEach(function(head){
+            head.addEventListener('click', function(){
+                var body = head.nextElementSibling;
+                var sign = head.querySelector('.acc-sign');
+                var open = body.style.maxHeight && body.style.maxHeight !== '0px';
+                document.querySelectorAll('.accordion-body').forEach(function(b){ b.style.maxHeight = '0px'; });
+                document.querySelectorAll('.acc-sign').forEach(function(s){ s.style.transform = 'rotate(0deg)'; s.textContent = '+'; });
+                if (!open){ body.style.maxHeight = body.scrollHeight + 'px'; if (sign){ sign.style.transform = 'rotate(45deg)'; } }
+            });
+        });
+
+        /* ② 弹窗 */
+        var modal = $('modal');
+        function openModal(title, text, icon){
+            $('modal-title').textContent = title; $('modal-text').textContent = text;
+            if (icon) $('modal-icon').textContent = icon;
+            modal.classList.remove('hidden');
+        }
+        function closeModal(){ modal.classList.add('hidden'); }
+        $('modal-close').addEventListener('click', closeModal);
+        $('modal-mask').addEventListener('click', closeModal);
+        document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeModal(); });
+
+        /* ⑤④ 动态表格 + localStorage 持久化 */
+        var tbody = $('roster-body'), empty = $('roster-empty');
+        function load(){ try { return JSON.parse(localStorage.getItem(STORE_KEY)) || []; } catch(_) { return []; } }
+        function save(list){ localStorage.setItem(STORE_KEY, JSON.stringify(list)); }
+        function render(){
+            var list = load();
+            tbody.querySelectorAll('tr[data-row]').forEach(function(tr){ tr.remove(); });
+            empty.style.display = list.length ? 'none' : '';
+            list.forEach(function(item, idx){
+                var tr = document.createElement('tr');
+                tr.setAttribute('data-row', idx);
+                tr.className = 'border-t border-zinc-800';
+                tr.innerHTML = '<td class="px-4 py-3">' + esc(item.name) + '</td>'
+                    + '<td class="px-4 py-3 text-zinc-400">' + esc(item.major) + '</td>'
+                    + '<td class="px-4 py-3 text-zinc-500">' + esc(item.time) + '</td>'
+                    + '<td class="px-4 py-3 text-center"><button data-del="' + idx + '" class="text-zinc-500 hover:text-red-400 transition" title="删除">✕</button></td>';
+                tbody.appendChild(tr);
+            });
+            tbody.querySelectorAll('[data-del]').forEach(function(b){
+                b.addEventListener('click', function(){
+                    var list = load(); list.splice(+b.getAttribute('data-del'), 1); save(list); render();
+                });
+            });
+        }
+        function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]; }); }
+
+        /* ⑩ 正则校验 + 提交 */
+        var phone = $('su-phone'), hint = $('phone-hint'), name = $('su-name');
+        var PHONE_RE = /^1[3-9]\d{9}$/;
+        phone.addEventListener('input', function(){
+            phone.value = phone.value.replace(/\D/g, '').slice(0, 11);
+            if (!phone.value){ hint.textContent = '请输入 11 位手机号'; hint.className = 'text-xs h-4 mb-3 text-zinc-500'; }
+            else if (PHONE_RE.test(phone.value)){ hint.textContent = '手机号格式正确 ✓'; hint.className = 'text-xs h-4 mb-3 text-emerald-400'; }
+            else { hint.textContent = '手机号格式不正确'; hint.className = 'text-xs h-4 mb-3 text-amber-400'; }
+        });
+        $('btn-signup').addEventListener('click', function(){
+            if (!name.value.trim()){ name.focus(); openModal('还差一点', '请先填写你的姓名。', '✋'); return; }
+            if (!PHONE_RE.test(phone.value)){ phone.focus(); hint.textContent = '请填写正确的 11 位手机号'; hint.className = 'text-xs h-4 mb-3 text-amber-400'; return; }
+            var list = load();
+            list.unshift({ name: name.value.trim(), major: MAJOR, time: new Date().toLocaleString('zh-CN', { hour12: false }) });
+            save(list); render();
+            name.value = ''; phone.value = ''; hint.textContent = '请输入 11 位手机号'; hint.className = 'text-xs h-4 mb-3 text-zinc-500';
+            openModal('报名成功', '已加入「' + MAJOR + '」报名名单，下方表格已更新（本地保存，刷新不丢）。', '🎉');
+        });
+        render();
+
+        /* ⑨ 电梯导航：滚动高亮 + 点击平滑滚动 */
+        var dots = document.querySelectorAll('#elevator .dot');
+        dots.forEach(function(d){
+            d.addEventListener('click', function(){
+                var t = document.getElementById(d.getAttribute('data-target'));
+                if (t) t.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth' });
+            });
+        });
+        var sections = ['top','intro','faq','signup','roster'].map(function(id){ return document.getElementById(id); }).filter(Boolean);
+        var spy = new IntersectionObserver(function(entries){
+            entries.forEach(function(en){
+                if (en.isIntersecting){
+                    dots.forEach(function(d){
+                        var on = d.getAttribute('data-target') === en.target.id;
+                        d.classList.toggle('active', on);
+                        d.style.background = on ? theme : '';
+                    });
+                }
+            });
+        }, { rootMargin: '-45% 0px -45% 0px' });
+        sections.forEach(function(s){ spy.observe(s); });
+    })();
+    </script>
+</body>
+</html>

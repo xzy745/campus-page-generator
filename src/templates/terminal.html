@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${majorName} ~ $ | AI 生成示例</title>
+  <meta name="description" content="「对话即渲染」生成示例 · 终端工程体：${department} · ${majorName}（${majorCode}）。含打字机命令、终端标签输出、复制按钮、实时状态条、课程过滤。" />
+  <link rel="preconnect" href="https://fonts.loli.net" />
+  <link rel="preconnect" href="https://gstatic.loli.net" crossorigin />
+  <link href="https://fonts.loli.net/css2?family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root { --theme: ${themeColor}; --bg:#080a0c; --panel:#0d1114; --line:#1c2228; --dim:#6b7680; --ink:#d6e2e0; }
+    html { scroll-behavior: smooth; }
+    body { background: var(--bg); color: var(--ink); font-family:'JetBrains Mono','Noto Sans SC',monospace; }
+    body::before { content:''; position:fixed; inset:0; z-index:0; pointer-events:none;
+      background:repeating-linear-gradient(0deg, rgba(255,255,255,.018) 0 1px, transparent 1px 3px); }
+    a:focus-visible, button:focus-visible { outline:2px solid var(--theme); outline-offset:2px; }
+    .win { background:var(--panel); border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+    .win-bar { background:#0a0d10; border-bottom:1px solid var(--line); }
+    .dot { width:11px; height:11px; border-radius:50%; }
+    .cursor::after { content:'▋'; color:var(--theme); animation:blink 1s steps(1) infinite; }
+    @keyframes blink { 50% { opacity:0; } }
+    .tab.on { color:var(--theme); border-bottom:2px solid var(--theme); }
+    .meter > span { display:block; height:100%; width:0; background:var(--theme); transition:width 1.2s cubic-bezier(.16,1,.3,1); }
+    .reveal { opacity:0; transform:translateY(20px); transition:opacity .6s, transform .6s; }
+    .reveal.in { opacity:1; transform:none; }
+    @media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto;} .reveal{opacity:1;transform:none;transition:none;} .cursor::after{animation:none;} }
+  </style>
+</head>
+<body class="antialiased relative">
+  <div class="relative z-10">
+  <div class="text-center text-xs py-2 px-4" style="background:color-mix(in srgb,var(--theme) 12%,var(--bg));border-bottom:1px solid var(--line)">
+    <span style="color:var(--theme)">$</span> 这是「对话即渲染」生成的终端工程体示例 · <a href="/studio/" class="underline underline-offset-2">./generate --mine →</a>
+  </div>
+
+  <header class="sticky top-0 z-50 flex items-center justify-between px-6 h-12 text-sm" style="background:rgba(8,10,12,.85);backdrop-filter:blur(6px);border-bottom:1px solid var(--line)">
+    <span><span style="color:var(--theme)">~/</span>${majorName} <span style="color:var(--dim)">[${majorCode}]</span></span>
+    <nav class="flex gap-3 text-xs">
+      <a href="index.html" class="px-3 py-1.5 rounded" style="border:1px solid var(--line)">cd ../画廊</a>
+      <a href="/studio/" class="px-3 py-1.5 rounded font-bold" style="background:var(--theme);color:#080a0c">⚡ run studio</a>
+    </nav>
+  </header>
+
+  <!-- 英雄：打字机命令 -->
+  <section class="max-w-5xl mx-auto px-6 pt-16 pb-10">
+    <p class="text-xs tracking-[0.3em] uppercase mb-5" style="color:var(--dim)">${department}</p>
+    <div class="win">
+      <div class="win-bar flex items-center gap-2 px-4 h-9">
+        <span class="dot" style="background:#ff5f56"></span><span class="dot" style="background:#ffbd2e"></span><span class="dot" style="background:#27c93f"></span>
+        <span class="ml-3 text-xs" style="color:var(--dim)">bash — ${majorName}</span>
+      </div>
+      <div class="p-6 text-sm leading-7">
+        <p><span style="color:var(--theme)">visitor@campus</span>:<span style="color:#7aa2f7">~</span>$ <span id="typed"></span><span id="caret" class="cursor"></span></p>
+        <pre id="out" class="mt-3 whitespace-pre-wrap" style="color:#aebfca"></pre>
+      </div>
+    </div>
+    <h1 class="font-bold tracking-tighter mt-10" style="font-size:clamp(2.6rem,8vw,5.5rem);line-height:1">${majorName}</h1>
+    <p class="mt-4 max-w-xl" style="color:var(--dim)">把物理世界拆解成可测量、可建造、可优化的系统。这是一份可交互的工程说明书。</p>
+  </section>
+
+  <!-- 实时状态条 -->
+  <section class="reveal max-w-5xl mx-auto px-6 py-10">
+    <p class="text-xs tracking-[0.25em] uppercase mb-6" style="color:var(--theme)">// system.status</p>
+    <div id="meters" class="grid sm:grid-cols-2 gap-x-10 gap-y-5"></div>
+  </section>
+
+  <!-- 终端标签输出 -->
+  <section class="reveal max-w-5xl mx-auto px-6 py-10">
+    <div class="win">
+      <div class="win-bar flex text-xs">
+        <button class="tab on px-5 py-3" data-t="0">cat 培养目标</button>
+        <button class="tab px-5 py-3" style="color:var(--dim)" data-t="1">ls 核心课程</button>
+        <button class="tab px-5 py-3" style="color:var(--dim)" data-t="2">man 就业</button>
+      </div>
+      <div id="pane" class="p-6 text-sm leading-7 min-h-[10rem]" style="color:#aebfca"></div>
+    </div>
+  </section>
+
+  <!-- 可复制 + 课程过滤 -->
+  <section class="reveal max-w-5xl mx-auto px-6 py-10">
+    <p class="text-xs tracking-[0.25em] uppercase mb-4" style="color:var(--theme)">// grep 课程</p>
+    <div class="flex items-center gap-2 mb-4">
+      <span style="color:var(--theme)">$</span>
+      <input id="filter" placeholder="输入关键词过滤课程，如 数据 / 设计 / 系统" class="flex-1 bg-transparent px-3 py-2 text-sm rounded" style="border:1px solid var(--line);outline:none" />
+    </div>
+    <ul id="courses" class="grid sm:grid-cols-2 gap-2 text-sm"></ul>
+
+    <div class="mt-8 win">
+      <div class="win-bar flex items-center justify-between px-4 h-9 text-xs" style="color:var(--dim)"><span>quickstart.sh</span><button id="copy" class="px-2 py-1 rounded" style="border:1px solid var(--line)">复制</button></div>
+      <pre id="snippet" class="p-5 text-sm" style="color:var(--theme)">git clone campus/${majorName}
+cd ${majorName} && make build
+./run --year 2026</pre>
+    </div>
+    <div class="mt-12 text-center"><a href="index.html" class="text-sm" style="color:var(--dim)">$ cd ../示例画廊</a></div>
+  </section>
+
+  <footer class="text-center py-10 text-xs" style="color:var(--dim);border-top:1px solid var(--line)">
+    © 2026 · ${majorName}（${department}）· built by 对话即渲染 · exit 0
+  </footer>
+  </div>
+
+  <script>
+  (function(){
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    var io = new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target);} }); }, { threshold:.12 });
+    document.querySelectorAll('.reveal').forEach(function(el){ io.observe(el); });
+
+    /* 打字机 */
+    var cmd = 'whoami --major', typed = document.getElementById('typed'), out = document.getElementById('out'), caret = document.getElementById('caret'), k = 0;
+    var RESP = '> 一名面向真实工程问题的建造者：会拆解、会动手、会把方案落地。\n> 模块加载完成。向下滚动查看系统状态。';
+    function type(){
+      if (reduce){ typed.textContent = cmd; out.textContent = RESP; return; }
+      if (k <= cmd.length){ typed.textContent = cmd.slice(0,k++); setTimeout(type, 70); }
+      else { caret.style.display='none'; var j=0; (function show(){ if(j<=RESP.length){ out.textContent = RESP.slice(0,j++); setTimeout(show, 16);} })(); }
+    }
+    type();
+
+    /* 实时状态条 */
+    var METERS = [['实践 / 动手',90],['理论深度',76],['系统思维',84],['团队协作',80]];
+    var mbox = document.getElementById('meters');
+    mbox.innerHTML = METERS.map(function(m){
+      return '<div><div class="flex justify-between text-xs mb-2"><span>'+m[0]+'</span><span style="color:var(--theme)">'+m[1]+'%</span></div>'
+        +'<div class="meter" style="height:8px;background:#05070a;border:1px solid var(--line);border-radius:999px;overflow:hidden"><span data-w="'+m[1]+'"></span></div></div>';
+    }).join('');
+    var mIO = new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting){ e.target.querySelectorAll('.meter > span').forEach(function(s){ s.style.width = s.getAttribute('data-w')+'%'; }); mIO.unobserve(e.target);} }); }, { threshold:.4 });
+    mIO.observe(mbox);
+
+    /* 终端标签 */
+    var PANES = [
+      '培养目标：\n  - 掌握学科核心原理与工程方法\n  - 能独立完成从设计、实现到测试的闭环\n  - 具备解决真实复杂工程问题的能力',
+      '核心课程/\n  ├── 工程数学\n  ├── 专业基础\n  ├── 设计与建模\n  ├── 实验与实训\n  └── 综合课程设计',
+      '就业(1) 用户手册\n  名称\n    ${majorName} — 工程师培养路径\n  去向\n    制造、能源、信息、建筑、交通等支柱行业\n  备注\n    工程能力具备高度可迁移性，跨行业适应力强'
+    ];
+    var pane = document.getElementById('pane');
+    function renderPane(i){ pane.textContent = PANES[i]; }
+    document.querySelectorAll('.tab').forEach(function(b){
+      b.addEventListener('click', function(){ document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('on'); t.style.color='var(--dim)'; }); b.classList.add('on'); b.style.color=''; renderPane(+b.getAttribute('data-t')); });
+    });
+    renderPane(0);
+
+    /* 课程过滤 */
+    var COURSES = ['工程数学','数据结构','控制系统','机械设计','电路分析','材料力学','系统建模','嵌入式开发','信号处理','工程制图','测控技术','优化方法'];
+    var ul = document.getElementById('courses'), filter = document.getElementById('filter');
+    function renderCourses(q){
+      var list = COURSES.filter(function(c){ return c.indexOf(q) > -1; });
+      ul.innerHTML = (list.length ? list : ['(无匹配)']).map(function(c){ return '<li class="px-3 py-2 rounded" style="background:var(--panel);border:1px solid var(--line)"><span style="color:var(--theme)">▸</span> '+c+'</li>'; }).join('');
+    }
+    filter.addEventListener('input', function(){ renderCourses(filter.value.trim()); });
+    renderCourses('');
+
+    /* 复制 */
+    var copy = document.getElementById('copy');
+    copy.addEventListener('click', function(){
+      var txt = document.getElementById('snippet').textContent;
+      (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(function(){ copy.textContent='已复制 ✓'; }).catch(function(){ copy.textContent='手动复制'; });
+      setTimeout(function(){ copy.textContent='复制'; }, 1600);
+    });
+  })();
+  </script>
+</body>
+</html>

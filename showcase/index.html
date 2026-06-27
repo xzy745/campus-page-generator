@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>专业招新 · 互动功能演示（10 个手写 JS 功能）</title>
+  <link rel="preconnect" href="https://fonts.loli.net" />
+  <link rel="preconnect" href="https://gstatic.loli.net" crossorigin />
+  <link href="https://fonts.loli.net/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@400;700;900&family=Playfair+Display:ital,wght@0,500;0,700;0,900;1,500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <style>
+    :root { --color-primary: #6366f1; --color-error: #f87171; --color-success: #4ade80; }
+    html { scroll-behavior: smooth; touch-action: manipulation; }
+    body { background:#09090b; font-family:'Inter','Noto Sans SC','PingFang SC','HarmonyOS Sans SC','Microsoft YaHei',system-ui,sans-serif; }
+    body::before { content:''; position:fixed; inset:0; z-index:-1; pointer-events:none; background:radial-gradient(50% 38% at 50% 0%, rgba(99,102,241,.13), transparent 70%); }
+    h1, h2, h3 { font-family: 'Playfair Display','Noto Serif SC','Georgia','Songti SC',serif; }
+    :focus-visible { outline: 2.5px solid var(--color-primary); outline-offset: 3px; border-radius: 4px; }
+    .skip-link { position: absolute; top: -100px; left: 16px; background: var(--color-primary); color: #fff; padding: .5rem 1rem; border-radius: 0 0 8px 8px; z-index: 9999; font-size: .85rem; font-weight: 600; transition: top .2s ease; text-decoration: none; }
+    .skip-link:focus { top: 0; }
+    a, button, [role="button"] { cursor: pointer; }
+    button, [role="button"] { min-height: 44px; min-width: 44px; }
+    /* 7. 鼠标跟随光效 */
+    #cursor-glow {
+      position: fixed; top: 0; left: 0; width: 400px; height: 400px;
+      margin-left: -200px; margin-top: -200px; /* 居中补偿，避免与 GSAP x/y 冲突 */
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(99,102,241,.18), transparent 60%);
+      pointer-events: none; z-index: 9999; opacity: 0;
+      will-change: transform;
+    }
+    /* 1. 轮播图轨道 */
+    .carousel-track { display: flex; transition: transform .6s cubic-bezier(.16,1,.3,1); }
+    .carousel-slide { min-width: 100%; }
+    /* 8. 手风琴 */
+    .accordion-body { max-height: 0; overflow: hidden; transition: max-height .4s ease; }
+    /* 9. 电梯导航激活点 */
+    .dot.active { background:#6366f1; transform: scale(1.6); }
+  </style>
+</head>
+<body class="text-zinc-100 font-sans antialiased selection:bg-indigo-500/40">
+  <a href="#main-content" class="skip-link">跳到主要内容</a>
+  <div id="cursor-glow"></div>
+
+  <!-- 顶部条 -->
+  <header class="fixed top-0 inset-x-0 z-50 bg-zinc-950/80 backdrop-blur border-b border-zinc-800">
+    <div class="max-w-6xl mx-auto px-5 h-14 flex items-center justify-between">
+      <a href="/" class="text-sm font-black tracking-tight">示范大学 · 招新<span class="text-indigo-400">互动</span></a>
+      <div class="flex items-center gap-4 text-xs">
+        <span id="login-state" class="text-zinc-400">未登录</span>
+        <a href="/" class="text-zinc-400 hover:text-white transition">← 返回专业总览</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- 9. 电梯导航（右侧滚动定位） -->
+  <nav id="elevator" class="hidden lg:flex flex-col gap-3 fixed right-6 top-1/2 -translate-y-1/2 z-40">
+    <a data-target="home"   class="dot w-3 h-3 rounded-full bg-zinc-600 transition-all" title="首页"></a>
+    <a data-target="login"  class="dot w-3 h-3 rounded-full bg-zinc-600 transition-all" title="登录"></a>
+    <a data-target="majors" class="dot w-3 h-3 rounded-full bg-zinc-600 transition-all" title="专业"></a>
+    <a data-target="signup" class="dot w-3 h-3 rounded-full bg-zinc-600 transition-all" title="报名"></a>
+    <a data-target="roster" class="dot w-3 h-3 rounded-full bg-zinc-600 transition-all" title="名单"></a>
+    <a data-target="faq"    class="dot w-3 h-3 rounded-full bg-zinc-600 transition-all" title="答疑"></a>
+    <a data-target="board"  class="dot w-3 h-3 rounded-full bg-zinc-600 transition-all" title="留言"></a>
+  </nav>
+
+  <main id="main-content" class="pt-14">
+
+    <!-- ① 轮播图 -->
+    <section id="home" class="max-w-6xl mx-auto px-5 py-20">
+      <p class="text-xs text-indigo-400 font-mono mb-3">JS ① 轮播图</p>
+      <div class="relative overflow-hidden rounded-3xl border border-zinc-800">
+        <div id="carousel" class="carousel-track">
+          <div class="carousel-slide relative h-[420px]">
+            <img src="/assets/majors/哲学类.jpg" class="w-full h-full object-cover" alt="" onerror="this.style.display='none'">
+            <div class="absolute inset-0 bg-gradient-to-t from-zinc-950 to-transparent flex items-end p-10"><div><h2 class="text-4xl font-black">求知 · 思辨</h2><p class="text-zinc-300 mt-2">在思想的星空里，遇见更辽阔的自己</p></div></div>
+          </div>
+          <div class="carousel-slide relative h-[420px]">
+            <img src="/assets/majors/经济学类.jpg" class="w-full h-full object-cover" alt="" onerror="this.style.display='none'">
+            <div class="absolute inset-0 bg-gradient-to-t from-zinc-950 to-transparent flex items-end p-10"><div><h2 class="text-4xl font-black">洞察 · 决策</h2><p class="text-zinc-300 mt-2">读懂资源配置背后的世界规律</p></div></div>
+          </div>
+          <div class="carousel-slide relative h-[420px]">
+            <img src="/assets/majors/法学类.jpg" class="w-full h-full object-cover" alt="" onerror="this.style.display='none'">
+            <div class="absolute inset-0 bg-gradient-to-t from-zinc-950 to-transparent flex items-end p-10"><div><h2 class="text-4xl font-black">公平 · 正义</h2><p class="text-zinc-300 mt-2">以法律之名，守护每一份权利</p></div></div>
+          </div>
+        </div>
+        <button id="prev" class="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 hover:bg-black/80 transition grid place-items-center">‹</button>
+        <button id="next" class="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 hover:bg-black/80 transition grid place-items-center">›</button>
+        <div id="dots" class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2"></div>
+      </div>
+    </section>
+
+    <!-- ③ localStorage 登录 -->
+    <section id="login" class="max-w-md mx-auto px-5 py-20">
+      <p class="text-xs text-indigo-400 font-mono mb-3">JS ③ 本地存储登录</p>
+      <div class="bg-zinc-900 border border-zinc-800 rounded-3xl p-8">
+        <h2 class="text-2xl font-bold mb-6">学生登录 / 注册</h2>
+        <input id="username" placeholder="用户名" class="w-full mb-3 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500">
+        <input id="password" type="password" placeholder="密码" class="w-full mb-5 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500">
+        <div class="flex gap-3">
+          <button id="btn-register" class="flex-1 bg-zinc-800 hover:bg-zinc-700 rounded-xl py-3 text-sm font-semibold transition">注册</button>
+          <button id="btn-login" class="flex-1 bg-indigo-500 hover:bg-indigo-400 rounded-xl py-3 text-sm font-semibold transition">登录</button>
+          <button id="btn-logout" class="hidden flex-1 bg-zinc-800 hover:bg-zinc-700 rounded-xl py-3 text-sm font-semibold transition">退出</button>
+        </div>
+        <p id="login-msg" class="text-xs text-zinc-500 mt-4 h-4"></p>
+      </div>
+    </section>
+
+    <!-- ⑥ 选项卡 -->
+    <section id="majors" class="max-w-4xl mx-auto px-5 py-20">
+      <p class="text-xs text-indigo-400 font-mono mb-3">JS ⑥ 切换选项卡</p>
+      <h2 class="text-2xl font-bold mb-6">专业介绍 · 计算机科学与技术</h2>
+      <div class="flex gap-2 mb-6 border-b border-zinc-800">
+        <button class="tab-btn px-5 py-3 text-sm font-semibold border-b-2 border-indigo-500 text-white" data-tab="0">培养目标</button>
+        <button class="tab-btn px-5 py-3 text-sm font-semibold border-b-2 border-transparent text-zinc-500" data-tab="1">核心课程</button>
+        <button class="tab-btn px-5 py-3 text-sm font-semibold border-b-2 border-transparent text-zinc-500" data-tab="2">就业方向</button>
+      </div>
+      <div class="tab-panel text-zinc-300 leading-relaxed" data-panel="0">培养具备扎实计算机理论基础与工程实践能力、能在软件与人工智能领域从事研发的高素质复合型人才。</div>
+      <div class="tab-panel hidden text-zinc-300 leading-relaxed" data-panel="1">数据结构、操作系统、计算机网络、数据库系统、编译原理、人工智能导论。</div>
+      <div class="tab-panel hidden text-zinc-300 leading-relaxed" data-panel="2">软件工程师、算法工程师、系统架构师、数据科学家，覆盖互联网、金融科技、智能制造等行业。</div>
+    </section>
+
+    <!-- ⑩ 正则验证 + ② 弹窗（报名） -->
+    <section id="signup" class="max-w-md mx-auto px-5 py-20">
+      <p class="text-xs text-indigo-400 font-mono mb-3">JS ⑩ 正则表达式验证　·　② 弹出窗口</p>
+      <div class="bg-zinc-900 border border-zinc-800 rounded-3xl p-8">
+        <h2 class="text-2xl font-bold mb-6">社团报名</h2>
+        <input id="su-name" placeholder="你的姓名" class="w-full mb-3 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500">
+        <input id="su-major" placeholder="意向专业" class="w-full mb-3 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500">
+        <input id="su-phone" inputmode="numeric" placeholder="手机号（11 位）" class="w-full mb-1 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500">
+        <p id="phone-hint" class="text-xs h-4 mb-3 text-zinc-500">请输入 11 位手机号</p>
+        <button id="btn-signup" class="w-full bg-indigo-500 hover:bg-indigo-400 rounded-xl py-3 text-sm font-bold transition">提交报名</button>
+        <p id="signup-msg" class="text-xs text-zinc-500 mt-4 h-4"></p>
+      </div>
+    </section>
+
+    <!-- ⑤ 动态表格 -->
+    <section id="roster" class="max-w-3xl mx-auto px-5 py-20">
+      <p class="text-xs text-indigo-400 font-mono mb-3">JS ⑤ 动态表格操作</p>
+      <h2 class="text-2xl font-bold mb-6">报名名单</h2>
+      <table class="w-full text-sm border border-zinc-800 rounded-xl overflow-hidden">
+        <thead class="bg-zinc-900 text-zinc-400">
+          <tr><th class="text-left px-4 py-3">姓名</th><th class="text-left px-4 py-3">意向专业</th><th class="text-left px-4 py-3">报名时间</th><th class="px-4 py-3 w-20">操作</th></tr>
+        </thead>
+        <tbody id="roster-body">
+          <tr id="roster-empty"><td colspan="4" class="text-center text-zinc-600 px-4 py-8">还没有人报名，去上面报一个吧</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ⑧ 手风琴 -->
+    <section id="faq" class="max-w-3xl mx-auto px-5 py-20">
+      <p class="text-xs text-indigo-400 font-mono mb-3">JS ⑧ 手风琴动画</p>
+      <h2 class="text-2xl font-bold mb-6">常见问题</h2>
+      <div id="accordion" class="space-y-3">
+        <div class="accordion-item border border-zinc-800 rounded-xl overflow-hidden">
+          <button class="accordion-head w-full text-left px-5 py-4 font-semibold flex justify-between items-center hover:bg-zinc-900 transition">报名需要什么条件？<span class="text-indigo-400">+</span></button>
+          <div class="accordion-body"><p class="px-5 pb-4 text-zinc-400 text-sm">本校在读学生均可报名，无专业限制，欢迎跨专业同学加入。</p></div>
+        </div>
+        <div class="accordion-item border border-zinc-800 rounded-xl overflow-hidden">
+          <button class="accordion-head w-full text-left px-5 py-4 font-semibold flex justify-between items-center hover:bg-zinc-900 transition">社团活动多吗？<span class="text-indigo-400">+</span></button>
+          <div class="accordion-body"><p class="px-5 pb-4 text-zinc-400 text-sm">每学期有技术沙龙、竞赛集训、企业参访等活动，平均每月 2-3 场。</p></div>
+        </div>
+        <div class="accordion-item border border-zinc-800 rounded-xl overflow-hidden">
+          <button class="accordion-head w-full text-left px-5 py-4 font-semibold flex justify-between items-center hover:bg-zinc-900 transition">能获得哪些资源？<span class="text-indigo-400">+</span></button>
+          <div class="accordion-body"><p class="px-5 pb-4 text-zinc-400 text-sm">对接院系实验室、行业导师一对一指导，以及全国性赛事的报名与集训支持。</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ④ 留言板 -->
+    <section id="board" class="max-w-3xl mx-auto px-5 py-20">
+      <p class="text-xs text-indigo-400 font-mono mb-3">JS ④ 留言板（本地存储，刷新不丢）</p>
+      <h2 class="text-2xl font-bold mb-6">咨询留言板</h2>
+      <div class="flex gap-3 mb-6">
+        <input id="msg-input" placeholder="写下你的问题或留言…" class="flex-1 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500">
+        <button id="msg-send" class="bg-indigo-500 hover:bg-indigo-400 rounded-xl px-6 text-sm font-bold transition">发布</button>
+      </div>
+      <ul id="msg-list" class="space-y-3"></ul>
+    </section>
+  </main>
+
+  <!-- ② 弹出窗口（通用 modal） -->
+  <div id="modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-5">
+    <div id="modal-mask" class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+    <div class="relative bg-zinc-900 border border-zinc-700 rounded-3xl p-8 max-w-sm w-full text-center">
+      <div id="modal-icon" class="text-5xl mb-4">🎉</div>
+      <h3 id="modal-title" class="text-xl font-bold mb-2">标题</h3>
+      <p id="modal-text" class="text-zinc-400 text-sm mb-6">内容</p>
+      <button id="modal-close" class="bg-indigo-500 hover:bg-indigo-400 rounded-xl px-8 py-3 text-sm font-bold transition">知道了</button>
+    </div>
+  </div>
+
+  <footer class="border-t border-zinc-800 py-8 text-center text-zinc-600 text-xs">
+    © 2026 示范大学 · 本页 10 个交互功能均为原生 JS 手写实现
+  </footer>
+
+  <script src="skills.js"></script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+{
+  "name": "campus-page-generator",
+  "version": "2.0.0",
+  "description": "对话即渲染：DeepSeek 驱动的实时 AI 网页生成器（轻后端代理 + 沙盒 iframe）。保留 v1 静态批量生成能力。",
+  "main": "server/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node generator.js && node server/index.js",
+    "serve": "node server/index.js",
+    "dev": "node server/index.js",
+    "build": "node generator.js",
+    "build:static": "node generator.js",
+    "preview": "node generator.js && node server/index.js"
+  },
+  "keywords": [
+    "ai",
+    "deepseek",
+    "网页生成",
+    "iframe",
+    "tailwind"
+  ],
+  "author": "徐致远",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.11.1",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
+  }
+}

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${majorName} · 展 | AI 生成示例</title>
+  <meta name="description" content="「对话即渲染」生成示例 · 艺术画廊体：${department} · ${majorName}（${majorCode}）。含自定义光标、跑马灯、图片灯箱、横向拖拽滚动。" />
+  <link rel="preconnect" href="https://fonts.loli.net" />
+  <link rel="preconnect" href="https://gstatic.loli.net" crossorigin />
+  <link href="https://fonts.loli.net/css2?family=Archivo+Black&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root { --theme: ${themeColor}; --bg:#0a0a0a; --ink:#f7f5f2; }
+    html { scroll-behavior: smooth; }
+    body { background: var(--bg); color: var(--ink); font-family:'Noto Sans SC',system-ui,sans-serif; overflow-x:hidden; }
+    .disp { font-family:'Archivo Black','Noto Sans SC',sans-serif; }
+    a:focus-visible, button:focus-visible { outline:2px solid var(--theme); outline-offset:3px; }
+    @media (pointer:fine){ * { cursor:none; } }
+    #cur { position:fixed; top:0; left:0; width:26px; height:26px; border:2px solid var(--theme); border-radius:50%;
+      transform:translate(-50%,-50%); pointer-events:none; z-index:9999; transition:width .2s, height .2s, background .2s; }
+    #cur.big { width:64px; height:64px; background:color-mix(in srgb,var(--theme) 25%,transparent); }
+    /* 跑马灯 */
+    .marquee { display:flex; gap:2.5rem; white-space:nowrap; animation:slide 22s linear infinite; }
+    @keyframes slide { to { transform:translateX(-50%); } }
+    /* 网格作品 */
+    .work { position:relative; overflow:hidden; aspect-ratio:4/5; }
+    .work img { width:100%; height:100%; object-fit:cover; transition:transform .6s cubic-bezier(.16,1,.3,1), filter .6s; }
+    .work:hover img { transform:scale(1.08); }
+    .work .cap { position:absolute; left:0; bottom:0; right:0; padding:1rem; background:linear-gradient(transparent, rgba(0,0,0,.8)); }
+    /* 横向拖拽 */
+    .hscroll { display:flex; gap:1.25rem; overflow-x:auto; scroll-snap-type:x mandatory; padding-bottom:1rem; cursor:grab; scrollbar-width:none; }
+    .hscroll::-webkit-scrollbar { display:none; }
+    .hcard { flex:0 0 78%; max-width:420px; scroll-snap-align:center; }
+    /* 灯箱 */
+    #lb { position:fixed; inset:0; z-index:100; background:rgba(0,0,0,.92); display:none; align-items:center; justify-content:center; padding:5vw; }
+    #lb.on { display:flex; }
+    #lb img { max-width:90vw; max-height:84vh; object-fit:contain; }
+    .reveal { opacity:0; transform:translateY(30px); transition:opacity .8s, transform .8s; }
+    .reveal.in { opacity:1; transform:none; }
+    @media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto;} .marquee{animation:none;} .reveal{opacity:1;transform:none;transition:none;} }
+  </style>
+</head>
+<body class="antialiased">
+  <div id="cur" aria-hidden="true"></div>
+
+  <div class="text-center text-xs py-2 px-4 disp tracking-wider" style="background:var(--theme);color:#0a0a0a">
+    ◆ 「对话即渲染」生成的艺术画廊体示例 · <a href="/studio/" class="underline underline-offset-2">生成我自己的 →</a>
+  </div>
+
+  <header class="px-6 h-16 flex items-center justify-between border-b border-white/10">
+    <span class="disp text-lg">${majorName}</span>
+    <nav class="flex gap-2 text-xs font-bold">
+      <a href="index.html" class="px-4 py-2 border border-white/30 rounded-full">← 画廊</a>
+      <a href="/studio/" class="px-4 py-2 rounded-full" style="background:var(--theme);color:#0a0a0a">⚡ 开始生成</a>
+    </nav>
+  </header>
+
+  <!-- 英雄：超大字 + 色块 -->
+  <section class="relative px-6 pt-16 pb-10">
+    <p class="text-xs tracking-[0.4em] uppercase mb-6" style="color:var(--theme)">${department} · ${majorCode}</p>
+    <h1 class="disp leading-[0.86] tracking-tight" style="font-size:clamp(3.4rem,15vw,11rem)">${majorName}</h1>
+    <div class="flex flex-wrap items-center gap-4 mt-8">
+      <span class="inline-block w-24 h-3" style="background:var(--theme)"></span>
+      <p class="text-lg max-w-md text-white/60">把感受变成可被看见的形式。这是一场可以拖动、可以放大的展览。</p>
+    </div>
+  </section>
+
+  <!-- 跑马灯 -->
+  <div class="py-6 border-y border-white/10 overflow-hidden">
+    <div class="marquee disp text-3xl md:text-5xl uppercase tracking-tight">
+      <span>${majorName} ✦ 创作 ✦ 表达 ✦ 想象 ✦ 形式 ✦ ${majorName} ✦ 创作 ✦ 表达 ✦ 想象 ✦ 形式 ✦</span>
+      <span aria-hidden="true">${majorName} ✦ 创作 ✦ 表达 ✦ 想象 ✦ 形式 ✦ ${majorName} ✦ 创作 ✦ 表达 ✦ 想象 ✦ 形式 ✦</span>
+    </div>
+  </div>
+
+  <!-- 作品网格（灯箱） -->
+  <section class="reveal px-6 py-16">
+    <div class="flex items-end justify-between mb-8">
+      <h2 class="disp text-3xl md:text-5xl">选 · 作</h2>
+      <span class="text-xs text-white/40">点击放大 ↗</span>
+    </div>
+    <div id="grid" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
+  </section>
+
+  <!-- 横向拖拽 -->
+  <section class="reveal px-6 py-10">
+    <h2 class="disp text-3xl md:text-5xl mb-7">横 · 览</h2>
+    <div id="hs" class="hscroll">
+      <div class="hcard"><div class="p-8 rounded-2xl h-72 flex flex-col justify-between" style="background:var(--theme);color:#0a0a0a"><span class="disp text-2xl">01</span><p class="disp text-3xl leading-tight">观察<br>世界</p></div></div>
+      <div class="hcard"><div class="p-8 rounded-2xl h-72 flex flex-col justify-between border border-white/15"><span class="disp text-2xl" style="color:var(--theme)">02</span><p class="disp text-3xl leading-tight">提出<br>问题</p></div></div>
+      <div class="hcard"><div class="p-8 rounded-2xl h-72 flex flex-col justify-between bg-white text-black"><span class="disp text-2xl">03</span><p class="disp text-3xl leading-tight">动手<br>创造</p></div></div>
+      <div class="hcard"><div class="p-8 rounded-2xl h-72 flex flex-col justify-between border border-white/15"><span class="disp text-2xl" style="color:var(--theme)">04</span><p class="disp text-3xl leading-tight">公开<br>表达</p></div></div>
+    </div>
+    <p class="text-xs text-white/40 mt-3">← 按住拖动 / 滑动 →</p>
+    <div class="mt-14 text-center"><a href="index.html" class="disp text-sm text-white/50">← 返回示例画廊</a></div>
+  </section>
+
+  <footer class="px-6 py-10 text-center text-xs text-white/40 border-t border-white/10">
+    © 2026 · ${majorName}（${department}）· 由「对话即渲染」生成器产出
+  </footer>
+
+  <!-- 灯箱 -->
+  <div id="lb"><img id="lb-img" src="" alt="放大作品" /></div>
+
+  <script>
+  (function(){
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    var io = new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target);} }); }, { threshold:.12 });
+    document.querySelectorAll('.reveal').forEach(function(el){ io.observe(el); });
+
+    /* 自定义光标 */
+    var cur = document.getElementById('cur');
+    if (window.matchMedia('(pointer:fine)').matches){
+      window.addEventListener('mousemove', function(e){ cur.style.left = e.clientX+'px'; cur.style.top = e.clientY+'px'; });
+      document.querySelectorAll('a,button,.work,.hcard').forEach(function(el){
+        el.addEventListener('mouseenter', function(){ cur.classList.add('big'); });
+        el.addEventListener('mouseleave', function(){ cur.classList.remove('big'); });
+      });
+    } else { cur.style.display = 'none'; }
+
+    /* 作品网格 + 灯箱（用主题图配不同滤镜，模拟多件作品） */
+    var FILTERS = ['none','grayscale(1)','contrast(1.4) saturate(.4)','hue-rotate(40deg)','sepia(.5)','grayscale(1) contrast(1.3)','saturate(1.6)','invert(.08) contrast(1.2)'];
+    var TITLES = ['静观','切片','负空间','色温','显影','质地','饱和','边界'];
+    var grid = document.getElementById('grid');
+    grid.innerHTML = FILTERS.map(function(f,i){
+      return '<button class="work" data-f="'+f+'"><img src="${heroImage}" alt="'+TITLES[i]+'" style="filter:'+f+'" onerror="this.parentNode.style.background=\'var(--theme)\'"/>'
+        +'<span class="cap text-left"><span class="disp text-sm">'+String(i+1).padStart(2,'0')+'</span><br><span class="text-xs text-white/70">'+TITLES[i]+'</span></span></button>';
+    }).join('');
+    var lb = document.getElementById('lb'), lbImg = document.getElementById('lb-img');
+    grid.querySelectorAll('.work').forEach(function(w){
+      w.addEventListener('click', function(){ var img = w.querySelector('img'); lbImg.src = img.src; lbImg.style.filter = w.getAttribute('data-f'); lb.classList.add('on'); });
+    });
+    lb.addEventListener('click', function(){ lb.classList.remove('on'); });
+    document.addEventListener('keydown', function(e){ if(e.key==='Escape') lb.classList.remove('on'); });
+
+    /* 横向拖拽 */
+    var hs = document.getElementById('hs'), down=false, sx, sl;
+    hs.addEventListener('pointerdown', function(e){ down=true; hs.style.cursor='grabbing'; sx=e.clientX; sl=hs.scrollLeft; });
+    window.addEventListener('pointerup', function(){ down=false; hs.style.cursor='grab'; });
+    window.addEventListener('pointermove', function(e){ if(down){ hs.scrollLeft = sl - (e.clientX - sx); } });
+  })();
+  </script>
+</body>
+</html>

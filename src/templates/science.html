@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${majorName} · 科学图谱 | AI 生成示例</title>
+  <meta name="description" content="「对话即渲染」生成示例 · 科学图表体：${department} · ${majorName}（${majorCode}）。含 canvas 粒子星座、SVG 折线描边、环形进度、方向切换。" />
+  <link rel="preconnect" href="https://fonts.loli.net" />
+  <link rel="preconnect" href="https://gstatic.loli.net" crossorigin />
+  <link href="https://fonts.loli.net/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root { --theme: ${themeColor}; --bg:#05070d; --panel:#0b1018; --line:#172033; --dim:#7e8aa3; --ink:#eaf0fb; }
+    html { scroll-behavior: smooth; }
+    body { background: var(--bg); color: var(--ink); font-family:'Space Grotesk','Noto Sans SC',system-ui,sans-serif; }
+    .mono { font-family:'JetBrains Mono', monospace; }
+    a:focus-visible, button:focus-visible { outline:2px solid var(--theme); outline-offset:2px; }
+    .panel { background:var(--panel); border:1px solid var(--line); border-radius:16px; }
+    #net { position:absolute; inset:0; width:100%; height:100%; }
+    .tab.on { background:var(--theme); color:#05070d; }
+    .draw { stroke-dasharray: 1; stroke-dashoffset: 1; }
+    .ring-fg { transition: stroke-dashoffset 1.3s cubic-bezier(.16,1,.3,1); }
+    .reveal { opacity:0; transform:translateY(22px); transition:opacity .7s, transform .7s; }
+    .reveal.in { opacity:1; transform:none; }
+    @media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto;} .reveal{opacity:1;transform:none;transition:none;} }
+  </style>
+</head>
+<body class="antialiased">
+  <div class="text-center text-xs py-2 px-4 mono" style="background:color-mix(in srgb,var(--theme) 12%,var(--bg));border-bottom:1px solid var(--line)">
+    ◇ 这是「对话即渲染」生成的<span style="color:var(--theme)">科学图表体示例</span> · <a href="/studio/" class="underline underline-offset-2">生成我自己的 →</a>
+  </div>
+
+  <!-- 英雄：canvas 粒子星座 -->
+  <section class="relative min-h-[88vh] flex items-center overflow-hidden">
+    <canvas id="net" aria-hidden="true"></canvas>
+    <div class="absolute inset-0" style="background:radial-gradient(60% 60% at 50% 40%, transparent, var(--bg) 85%)"></div>
+    <div class="relative max-w-6xl mx-auto px-6 w-full">
+      <p class="mono text-xs tracking-[0.3em] uppercase mb-4" style="color:var(--theme)">${department} · ${majorCode}</p>
+      <h1 class="font-bold tracking-tighter" style="font-size:clamp(2.8rem,8vw,6rem);line-height:1">${majorName}</h1>
+      <p class="mt-5 max-w-xl text-lg" style="color:var(--dim)">以观测、建模与实验逼近世界的底层规律。下滑查看本学科的能力图谱与知识曲线。</p>
+      <div class="mt-8 flex gap-3">
+        <a href="#map" class="mono text-sm px-5 py-2.5 rounded-lg font-bold" style="background:var(--theme);color:#05070d">查看图谱 ↓</a>
+        <a href="index.html" class="mono text-sm px-5 py-2.5 rounded-lg" style="border:1px solid var(--line)">← 画廊</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- 能力环形进度 -->
+  <section id="map" class="reveal max-w-6xl mx-auto px-6 py-16">
+    <p class="mono text-xs tracking-[0.25em] uppercase" style="color:var(--theme)">Competency</p>
+    <h2 class="text-2xl md:text-3xl font-bold mt-1 mb-10">能力配比</h2>
+    <div id="rings" class="grid grid-cols-2 md:grid-cols-4 gap-6"></div>
+  </section>
+
+  <!-- 知识曲线：SVG 折线描边 -->
+  <section class="reveal max-w-6xl mx-auto px-6 py-12">
+    <p class="mono text-xs tracking-[0.25em] uppercase" style="color:var(--theme)">Trajectory</p>
+    <h2 class="text-2xl md:text-3xl font-bold mt-1 mb-8">四年知识曲线</h2>
+    <div class="panel p-6">
+      <svg id="curve" viewBox="0 0 600 220" class="w-full" preserveAspectRatio="none" style="height:220px">
+        <g stroke="var(--line)" stroke-width="1">
+          <line x1="0" y1="55" x2="600" y2="55"/><line x1="0" y1="110" x2="600" y2="110"/><line x1="0" y1="165" x2="600" y2="165"/>
+        </g>
+        <polyline id="curve-line" class="draw" fill="none" stroke="var(--theme)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"
+          points="0,200 150,150 300,120 450,60 600,20"/>
+      </svg>
+      <div class="flex justify-between mono text-xs mt-3" style="color:var(--dim)"><span>大一·基础</span><span>大二·进阶</span><span>大三·方向</span><span>大四·科研</span></div>
+    </div>
+  </section>
+
+  <!-- 研究方向切换 -->
+  <section class="reveal max-w-6xl mx-auto px-6 py-16">
+    <p class="mono text-xs tracking-[0.25em] uppercase" style="color:var(--theme)">Directions</p>
+    <h2 class="text-2xl md:text-3xl font-bold mt-1 mb-6">研究方向</h2>
+    <div class="flex flex-wrap gap-2 mb-6 mono text-sm">
+      <button class="tab on px-4 py-2 rounded-lg" data-d="0" style="border:1px solid var(--line)">理论 / 建模</button>
+      <button class="tab px-4 py-2 rounded-lg" data-d="1" style="border:1px solid var(--line)">实验 / 观测</button>
+      <button class="tab px-4 py-2 rounded-lg" data-d="2" style="border:1px solid var(--line)">计算 / 数据</button>
+    </div>
+    <div id="dir" class="panel p-7"></div>
+    <div class="mt-12 text-center"><a href="index.html" class="mono text-sm" style="color:var(--dim)">← 返回示例画廊</a></div>
+  </section>
+
+  <footer class="text-center py-10 text-xs mono" style="color:var(--dim);border-top:1px solid var(--line)">
+    © 2026 · ${majorName}（${department}）· 由「对话即渲染」生成器产出 · 数据为示意
+  </footer>
+
+  <script>
+  (function(){
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var theme = getComputedStyle(document.documentElement).getPropertyValue('--theme').trim();
+
+    var io = new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target);} }); }, { threshold:.1 });
+    document.querySelectorAll('.reveal').forEach(function(el){ io.observe(el); });
+
+    /* canvas 粒子星座 */
+    var cv = document.getElementById('net'), ctx = cv.getContext('2d'), pts = [], W, H;
+    function resize(){ W = cv.width = cv.offsetWidth; H = cv.height = cv.offsetHeight; }
+    resize(); window.addEventListener('resize', resize);
+    var N = Math.min(70, Math.floor(W / 22));
+    for (var i=0;i<N;i++) pts.push({ x:Math.random()*W, y:Math.random()*H, vx:(Math.random()-.5)*.35, vy:(Math.random()-.5)*.35 });
+    function draw(){
+      ctx.clearRect(0,0,W,H);
+      for (var i=0;i<pts.length;i++){
+        var p = pts[i];
+        if (!reduce){ p.x+=p.vx; p.y+=p.vy; if(p.x<0||p.x>W)p.vx*=-1; if(p.y<0||p.y>H)p.vy*=-1; }
+        ctx.fillStyle = theme; ctx.globalAlpha = .8; ctx.beginPath(); ctx.arc(p.x,p.y,1.6,0,6.28); ctx.fill();
+        for (var j=i+1;j<pts.length;j++){
+          var q = pts[j], dx=p.x-q.x, dy=p.y-q.y, d=dx*dx+dy*dy;
+          if (d < 14000){ ctx.globalAlpha = (1 - d/14000)*.35; ctx.strokeStyle = theme; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(q.x,q.y); ctx.stroke(); }
+        }
+      }
+      ctx.globalAlpha = 1;
+      if (!reduce) requestAnimationFrame(draw);
+    }
+    draw();
+
+    /* 环形进度 */
+    var RINGS = [['抽象思维',88],['动手实验',72],['数理建模',90],['编程计算',78]];
+    var box = document.getElementById('rings');
+    box.innerHTML = RINGS.map(function(r){
+      var C = 2*Math.PI*42;
+      return '<div class="panel p-5 flex flex-col items-center"><svg width="120" height="120" viewBox="0 0 120 120">'
+        +'<circle cx="60" cy="60" r="42" fill="none" stroke="var(--line)" stroke-width="10"/>'
+        +'<circle class="ring-fg" cx="60" cy="60" r="42" fill="none" stroke="'+theme+'" stroke-width="10" stroke-linecap="round" '
+        +'transform="rotate(-90 60 60)" stroke-dasharray="'+C+'" stroke-dashoffset="'+C+'" data-pct="'+r[1]+'" data-c="'+C+'"/>'
+        +'<text x="60" y="66" text-anchor="middle" fill="var(--ink)" font-size="22" font-family="JetBrains Mono">'+r[1]+'</text></svg>'
+        +'<span class="text-sm mt-2">'+r[0]+'</span></div>';
+    }).join('');
+    var ringIO = new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting){ e.target.querySelectorAll('.ring-fg').forEach(function(c){ var C=+c.getAttribute('data-c'); c.style.strokeDashoffset = C*(1 - c.getAttribute('data-pct')/100); }); ringIO.unobserve(e.target);} }); }, { threshold:.4 });
+    ringIO.observe(box);
+
+    /* SVG 折线描边 */
+    var line = document.getElementById('curve-line');
+    var len = line.getTotalLength(); line.style.strokeDasharray = len; line.style.strokeDashoffset = reduce ? 0 : len;
+    var curveIO = new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting){ line.style.transition='stroke-dashoffset 1.6s ease'; line.style.strokeDashoffset = 0; curveIO.unobserve(e.target);} }); }, { threshold:.4 });
+    curveIO.observe(document.getElementById('curve'));
+
+    /* 方向切换 */
+    var DIR = [
+      ['理论 / 建模','从公理与基本定律出发，建立可推演的数学模型。','f(x) = ∫ ρ(x) dx   ·   ∇·E = ρ/ε₀','适合喜欢推导、追问"为什么"的同学。'],
+      ['实验 / 观测','在受控条件下测量与验证，让假设接受现实检验。','观测 → 假设 → 实验 → 修正 → 定律','适合动手能力强、享受在实验室探索的同学。'],
+      ['计算 / 数据','用算法与算力处理海量数据，模拟难以直接实验的系统。','for t in range(T): state = step(state)','适合编程友好、对数据与可视化敏感的同学。']
+    ];
+    var dir = document.getElementById('dir');
+    function renderDir(i){
+      dir.innerHTML = '<h3 class="text-xl font-bold mb-3">'+DIR[i][0]+'</h3><p class="mb-4" style="color:#c4cde0">'+DIR[i][1]+'</p>'
+        +'<pre class="mono text-sm p-4 rounded-lg overflow-x-auto" style="background:#05070d;border:1px solid var(--line);color:'+theme+'">'+DIR[i][2]+'</pre>'
+        +'<p class="mono text-xs mt-4" style="color:var(--dim)">'+DIR[i][3]+'</p>';
+    }
+    document.querySelectorAll('.tab').forEach(function(b){ b.addEventListener('click', function(){ document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('on'); }); b.classList.add('on'); renderDir(+b.getAttribute('data-d')); }); });
+    renderDir(0);
+  })();
+  </script>
+</body>
+</html>

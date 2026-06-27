@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>对话即渲染 · AI 网页生成器</title>
+  <link rel="preconnect" href="https://fonts.loli.net" />
+  <link rel="preconnect" href="https://gstatic.loli.net" crossorigin />
+  <link href="https://fonts.loli.net/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --color-primary: #6366f1;
+      --color-error: #f87171;
+      --color-success: #4ade80;
+    }
+    body { font-family: 'Inter','Noto Sans SC','PingFang SC','HarmonyOS Sans SC','Microsoft YaHei',system-ui,sans-serif; }
+    body::before { content:''; position:fixed; inset:0; z-index:-1; pointer-events:none; background:radial-gradient(50% 34% at 50% 0%, rgba(99,102,241,.12), transparent 70%); }
+    .glow-btn { transition: all .4s cubic-bezier(.4,0,.2,1); }
+    :focus-visible { outline: 2.5px solid var(--color-primary); outline-offset: 3px; border-radius: 4px; }
+    .skip-link { position: absolute; top: -100px; left: 16px; background: var(--color-primary); color: #fff; padding: .5rem 1rem; border-radius: 0 0 8px 8px; z-index: 9999; font-size: .85rem; font-weight: 600; transition: top .2s ease; text-decoration: none; }
+    .skip-link:focus { top: 0; }
+    /* ── 骨架屏（L8）────────────────────── */
+    @keyframes shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
+    .skeleton { background: linear-gradient(90deg, #1a1a2e 25%, #252540 50%, #1a1a2e 75%); background-size: 800px 100%; animation: shimmer 1.6s ease-in-out infinite; border-radius: 8px; }
+    .skeleton-bar { height: 16px; margin-bottom: 12px; width: 100%; }
+    .skeleton-bar.short { width: 60%; }
+    .skeleton-block { height: 200px; width: 100%; }
+    .glow-btn:hover:not(:disabled) { box-shadow: 0 0 30px rgba(99,102,241,.6); transform: translateY(-2px); }
+    .spin { animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    /* 登录弹窗 */
+    .modal-overlay { background: rgba(0,0,0,.7); backdrop-filter: blur(4px); }
+  </style>
+</head>
+<body class="bg-zinc-950 text-zinc-50 font-sans antialiased h-screen flex flex-col">
+  <a href="#main-content" class="skip-link">跳到主要内容</a>
+
+  <header class="px-6 py-3 border-b border-zinc-900 flex items-center justify-between shrink-0">
+    <div>
+      <h1 class="text-lg font-bold tracking-normal">对话即渲染 <span class="text-indigo-400">Studio</span></h1>
+      <p class="text-xs text-zinc-500">输入需求 → DeepSeek 生成 → 沙盒实时预览</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <a href="/" class="text-xs text-zinc-400 hover:text-white transition">← 校园专业总览</a>
+      <span id="status" class="text-xs px-3 py-1 rounded-full bg-zinc-900 text-zinc-400">检测中…</span>
+      <button id="btn-login-ui" class="text-xs px-3 py-1.5 rounded-full border border-zinc-700 hover:border-zinc-500 transition">登录</button>
+      <span id="user-label" class="hidden text-xs text-emerald-400"></span>
+      <button id="btn-logout-ui" class="hidden text-xs px-3 py-1.5 rounded-full border border-zinc-700 hover:border-red-500 transition">退出</button>
+    </div>
+  </header>
+
+  <main id="main-content" class="flex-1 flex flex-col md:flex-row min-h-0">
+    <!-- 左：对话输入 + 历史记录 -->
+    <section class="md:w-[400px] shrink-0 border-r border-zinc-900 flex flex-col min-h-0">
+      <div class="p-5 flex flex-col gap-4 shrink-0">
+        <label class="text-xs uppercase tracking-widest text-zinc-500">描述你想要的网页</label>
+        <textarea id="prompt" rows="4"
+          class="w-full bg-zinc-900 border border-zinc-800 rounded-2xl p-4 text-sm resize-none focus:outline-none focus:border-indigo-500 transition"
+          placeholder="例如：生成一个摄影师个人作品集网页，极简黑白风格，含作品网格和联系方式"></textarea>
+
+        <button id="generate"
+          class="glow-btn bg-indigo-500 hover:bg-indigo-400 text-white font-bold rounded-2xl py-3 text-sm uppercase tracking-widest disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+          <span id="btn-label">生成网页</span>
+          <svg id="btn-spin" class="spin hidden" width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-dasharray="40 60"/></svg>
+        </button>
+
+        <div class="text-xs text-zinc-600 leading-relaxed">
+          <p class="mb-2 text-zinc-500">试试这些：</p>
+          <div id="examples" class="flex flex-col gap-2"></div>
+        </div>
+
+        <div class="flex items-center gap-3 text-xs">
+          <button id="view-code" class="text-zinc-500 hover:text-zinc-300 transition">查看源码</button>
+          <button id="download" class="text-zinc-500 hover:text-zinc-300 transition">下载 HTML</button>
+        </div>
+      </div>
+
+      <!-- 生成历史 -->
+      <div class="border-t border-zinc-900 flex-1 flex flex-col min-h-0">
+        <div class="px-5 py-3 flex items-center justify-between">
+          <span class="text-xs text-zinc-500 uppercase tracking-widest">生成历史</span>
+          <button id="btn-refresh-history" class="text-xs text-zinc-600 hover:text-zinc-400 transition">刷新</button>
+        </div>
+        <div id="history-list" class="flex-1 overflow-y-auto px-3 pb-3 space-y-1 text-xs">
+          <p class="text-zinc-700 text-center py-6">点击刷新加载…</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 右：沙盒预览 -->
+    <section class="flex-1 relative bg-zinc-900/30 min-h-0">
+      <iframe id="preview" sandbox="allow-scripts"
+        class="w-full h-full bg-white"
+        title="预览"></iframe>
+
+      <div id="placeholder" class="absolute inset-0 flex items-center justify-center text-zinc-600 text-sm pointer-events-none">
+        生成结果会在这里实时渲染
+      </div>
+      <div id="skeleton" class="hidden absolute inset-0 p-10 flex flex-col gap-4 pointer-events-none">
+        <div class="skeleton skeleton-bar w-3/4"></div>
+        <div class="skeleton skeleton-bar w-1/2"></div>
+        <div class="skeleton skeleton-bar short w-2/3"></div>
+        <div class="skeleton skeleton-block mt-6"></div>
+        <div class="skeleton skeleton-bar w-full mt-4"></div>
+        <div class="skeleton skeleton-bar w-5/6"></div>
+        <div class="skeleton skeleton-bar short w-1/3"></div>
+      </div>
+      <pre id="code" class="hidden absolute inset-0 overflow-auto bg-zinc-950 text-zinc-300 text-xs p-5 leading-relaxed"></pre>
+    </section>
+  </main>
+
+  <!-- 登录 / 注册弹窗 -->
+  <div id="auth-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-5 modal-overlay">
+    <div class="bg-zinc-900 border border-zinc-700 rounded-3xl p-8 w-full max-w-sm">
+      <h2 id="auth-title" class="text-xl font-bold mb-6">登录</h2>
+      <input id="auth-username" placeholder="用户名" class="w-full mb-3 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500">
+      <input id="auth-password" type="password" placeholder="密码" class="w-full mb-5 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500">
+      <p id="auth-msg" class="text-xs h-5 mb-4"></p>
+      <div class="flex gap-3">
+        <button id="btn-auth-action" class="flex-1 bg-indigo-500 hover:bg-indigo-400 rounded-xl py-3 text-sm font-bold transition">登录</button>
+        <button id="btn-auth-switch" class="flex-1 bg-zinc-800 hover:bg-zinc-700 rounded-xl py-3 text-sm transition">去注册</button>
+      </div>
+      <button id="btn-auth-close" class="mt-4 w-full text-xs text-zinc-600 hover:text-zinc-400 transition">取消</button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
