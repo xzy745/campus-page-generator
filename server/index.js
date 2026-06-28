@@ -6,7 +6,7 @@ require("dotenv").config();
 const path = require("path");
 const { spawn } = require("child_process");
 const express = require("express");
-const { generatePage } = require("./llm");
+const { generatePage, editNode } = require("./llm");
 const { saveGeneration, listGenerations, getGeneration, countGenerations, deleteGeneration } = require("./store");
 const { register, login } = require("./auth");
 
@@ -56,12 +56,13 @@ app.post("/api/auth/login", (req, res) => {
 // ─── AI 生成 API（数据库 2：生成记录）───────────
 app.post("/api/generate", async (req, res) => {
   const prompt = (req.body?.prompt || "").trim();
+  const options = req.body?.options || {};
   if (!prompt) {
     return res.status(400).json({ error: "请提供 prompt（你想生成什么网页）。" });
   }
 
   try {
-    const { html, truncated } = await generatePage(prompt);
+    const { html, truncated } = await generatePage(prompt, options);
 
     await saveGeneration({
       prompt,
@@ -73,6 +74,21 @@ app.post("/api/generate", async (req, res) => {
     res.json({ html, truncated });
   } catch (err) {
     console.error("❌ /api/generate 失败:", err.message);
+    res.status(err.status || 500).json({ error: err.message });
+  }
+});
+
+// ─── 局部结构编辑 API（只重写选中节点，不重写整页）──
+app.post("/api/edit-node", async (req, res) => {
+  const { nodeId, nodeName, nodeType, html, instruction } = req.body || {};
+  if (!html || !instruction || !(instruction + "").trim()) {
+    return res.status(400).json({ error: "请提供选中结构的 html 和修改要求 instruction。" });
+  }
+  try {
+    const newHtml = await editNode({ nodeId, nodeName, nodeType, html, instruction: (instruction + "").trim() });
+    res.json({ html: newHtml });
+  } catch (err) {
+    console.error("❌ /api/edit-node 失败:", err.message);
     res.status(err.status || 500).json({ error: err.message });
   }
 });
@@ -137,7 +153,7 @@ function startServer(port, remainingRetries = 10) {
     console.log(`\n🚀 统一服务已启动: ${localUrl}`);
     console.log(`   校园专业总览(3D卡片): ${localUrl}  ${distReady ? "" : "⚠ dist 未构建，先跑 npm run build:static"}`);
     console.log(`   AI 对话即渲染 Studio: http://localhost:${actualPort}/studio/`);
-    console.log(`   10 个手写 JS 功能演示: http://localhost:${actualPort}/skills/`);
+    console.log(`   网页能力规格书(6项能力演示): http://localhost:${actualPort}/skills/`);
     console.log(`   模型: ${MODEL} ｜ 密钥: ${keyOk ? "已配置 ✓" : "⚠ 未配置（请在 .env 写 DEEPSEEK_API_KEY）"}`);
     console.log(`   📦 数据库: data/users.db + data/generations.db\n`);
     openBrowser(localUrl);

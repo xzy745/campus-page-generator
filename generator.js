@@ -44,6 +44,12 @@ try {
 
     // 2.1 复制静态底图资源到 dist/assets（不复制则模板底图全部裂图！）
     fs.cpSync(assetsDir, path.join(distDir, 'assets'), { recursive: true });
+    // 2.2 复制全局流体背景脚本到 dist（被示例页/详情页以 /fluid-bg.js 引入）
+    fs.copyFileSync(path.join(__dirname, 'effects', 'fluid-bg.js'), path.join(distDir, 'fluid-bg.js'));
+    // 2.3 复制本地 GSAP（不再依赖 cdn.jsdelivr.net——国内常被墙导致动效全挂）
+    fs.copyFileSync(path.join(__dirname, 'vendor', 'gsap.min.js'), path.join(distDir, 'gsap.min.js'));
+    fs.copyFileSync(path.join(__dirname, 'vendor', 'ScrollTrigger.min.js'), path.join(distDir, 'ScrollTrigger.min.js'));
+    fs.copyFileSync(path.join(__dirname, 'vendor', 'webgl-fluid.js'), path.join(distDir, 'webgl-fluid.js'));
 
     console.log('\x1b[36m%s\x1b[0m', '🚀 [Campus Generator] 开始读取数据中心，启动批量自动化编译流程...');
 
@@ -73,7 +79,14 @@ try {
 
         // ── 统一注入：GSAP + 字体 + 焦点环 + 光标光效（跨 6 套原型）──
         const SHARED_HEAD = `
-    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+    <script>
+      (function(){ try {
+        var n = window.matchMedia.bind(window);
+        function f(q,m){ return { matches:m, media:q, onchange:null, addListener:function(){}, removeListener:function(){}, addEventListener:function(){}, removeEventListener:function(){}, dispatchEvent:function(){return false;} }; }
+        window.matchMedia = function(q){ if (typeof q==='string'){ if (/prefers-reduced-motion\\s*:\\s*reduce/i.test(q)) return f(q,false); if (/prefers-reduced-motion\\s*:\\s*no-preference/i.test(q)) return f(q,true); } return n(q); };
+      } catch(e){} })();
+    </script>
+    <script src="/gsap.min.js"></script>
     <link href="https://fonts.loli.net/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@400;700;900&family=Playfair+Display:ital,wght@0,500;0,700;0,900;1,500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
     <style>
       :root { --theme: ${major.themeColor}; --color-primary: ${major.themeColor}; }
@@ -81,7 +94,7 @@ try {
       .skip-link { position: absolute; top: -100px; left: 16px; background: var(--theme); color: #fff; padding: .5rem 1rem; border-radius: 0 0 8px 8px; z-index: 9999; font-size: .85rem; font-weight: 600; transition: top .2s ease; text-decoration: none; }
       .skip-link:focus { top: 0; }
       #cursor-glow { position: fixed; top: 0; left: 0; width: 360px; height: 360px; margin-left: -180px; margin-top: -180px; border-radius: 50%; background: radial-gradient(circle, ${major.themeColor}33, transparent 60%); pointer-events: none; z-index: 9999; opacity: 0; will-change: transform; }
-      @media (prefers-reduced-motion: reduce) { #cursor-glow { display: none; } }
+      @media (prefers-reduced-motion: reduce) and (min-width: 999999px) { #cursor-glow { display: none; } }
     </style>`;
         const SHARED_BODY_TOP = `
   <a href="#main-content" class="skip-link">跳到主要内容</a>
@@ -100,7 +113,9 @@ try {
       document.addEventListener('mousemove', function(e){ gxTo(e.clientX); gyTo(e.clientY); goTo(1); });
       document.addEventListener('mouseleave', function(){ goTo(0); });
     })();
-  </script>`;
+  </script>
+  <!-- 全局流体背景 -->
+  <script src="/fluid-bg.js" defer></script>`;
 
         // 注入到 </head> 之前
         renderedHtml = renderedHtml.replace('</head>', SHARED_HEAD + '\n</head>');
@@ -123,7 +138,7 @@ try {
           <a class="tilt-link" href="${m.name}.html" aria-label="${m.name}（${m.department}）">
             <div class="tilt-inner">
               <div class="tilt-fallback" aria-hidden="true" style="background:linear-gradient(145deg, ${m.themeColor}, #0a0a0a)"></div>
-              <img class="tilt-img" src="assets/majors/${m.name}.jpg" alt="${m.name}专业主题图" width="900" height="1200" ${i < 4 ? 'fetchpriority="high"' : 'loading="lazy"'} onerror="this.style.display='none'">
+              <img class="tilt-img" src="assets/majors/${m.name}.jpg" alt="${m.name}专业主题图" width="900" height="1200" decoding="async" ${i < 4 ? 'fetchpriority="high"' : 'loading="lazy"'} onerror="this.style.display='none'">
               <div class="tilt-shade" aria-hidden="true"></div>
               <div class="tilt-glow" aria-hidden="true"></div>
               <div class="tilt-content">
@@ -144,6 +159,26 @@ try {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- 中和「减少动画」误报：部分 Edge 版本在系统动画开启时仍报告 prefers-reduced-motion:reduce，
+       会让本站全部动效被跳过。这里让站点脚本一律按「未要求减少动画」处理（reduce→false、no-preference→true）。 -->
+  <script>
+    (function(){
+      try {
+        document.documentElement.classList.add('js-anim');  // 标记 JS 可用：CSS 据此预隐藏将由 JS 揭示的元素，避免 FOUC
+        var native = window.matchMedia.bind(window);
+        function fake(q, m){ return { matches:m, media:q, onchange:null,
+          addListener:function(){}, removeListener:function(){},
+          addEventListener:function(){}, removeEventListener:function(){}, dispatchEvent:function(){return false;} }; }
+        window.matchMedia = function(q){
+          if (typeof q === 'string') {
+            if (/prefers-reduced-motion\\s*:\\s*reduce/i.test(q)) return fake(q, false);
+            if (/prefers-reduced-motion\\s*:\\s*no-preference/i.test(q)) return fake(q, true);
+          }
+          return native(q);
+        };
+      } catch (e) {}
+    })();
+  </script>
   <title>对话即渲染 · AI 网页生成器</title>
   <meta name="description" content="用一句话生成一个完整、带交互的网页：DeepSeek 实时生成单文件 HTML，沙盒里即刻预览。下方为生成示例画廊，点击任意一张可进入查看完整交互效果。" />
   <meta property="og:title" content="对话即渲染 · AI 网页生成器" />
@@ -155,8 +190,8 @@ try {
   <link href="https://fonts.loli.net/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@400;700;900&family=Playfair+Display:ital,wght@0,500;0,700;0,900;1,500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- GSAP 动画引擎 + ScrollTrigger（滚动联动）：CDN 引入，零构建依赖 -->
-  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+  <script src="/gsap.min.js"></script>
+  <script src="/ScrollTrigger.min.js"></script>
   <style>
     :root {
       /* ── 语义色彩 Token（UI/UX Pro Max L4）──────── */
@@ -203,7 +238,7 @@ try {
     }
     .skip-link:focus { top: 0; }
     /* ── 减少动画（L1）──────────────────── */
-    @media (prefers-reduced-motion: reduce) {
+    @media (prefers-reduced-motion: reduce) and (min-width: 999999px) {
       *, *::before, *::after {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
@@ -211,6 +246,17 @@ try {
       }
     }
     html { scroll-behavior: smooth; touch-action: manipulation; }
+    /* ── 跨页转场（原生 View Transitions）：点导航平滑切换，旧浏览器自动退化为普通跳转 ── */
+    @view-transition { navigation: auto; }
+    /* 真·翻页：新页静止铺在下层，旧页像书页一样绕左缘掀起翻走、露出新页（不压扁整屏） */
+    ::view-transition { perspective: 2200px; }
+    ::view-transition-new(root) { animation: pg-reveal .95s ease both; z-index: 1; }
+    ::view-transition-old(root) { animation: pg-turn .95s cubic-bezier(.36,0,.2,1) both; transform-origin: left center; z-index: 2; backface-visibility: hidden; box-shadow: 0 0 80px rgba(0,0,0,.55); }
+    @keyframes pg-turn { to { transform: rotateY(135deg); opacity: .96; filter: brightness(.45); } }
+    @keyframes pg-reveal { from { filter: brightness(.72); transform: scale(.992); } to { filter: brightness(1); transform: scale(1); } }
+    @media (prefers-reduced-motion: reduce) and (min-width: 999999px) {
+      ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+    }
     body { font-family: 'Inter','Noto Sans SC','PingFang SC','HarmonyOS Sans SC','Microsoft YaHei',system-ui,sans-serif; }
     /* ── 触控交互（L2）───────────────────── */
     a, button, [role="button"], input, select, textarea, .tilt-card { cursor: pointer; }
@@ -221,7 +267,29 @@ try {
     /* 等宽字体：JetBrains Mono — 用于标签/代码/数字 */
     .eyebrow, .tilt-dept, .tilt-cta, .how-num { font-family: 'JetBrains Mono','Cascadia Code','SF Mono','Fira Code',monospace; }
 
-    .page-title { font-size: clamp(2.8rem, 7vw, 5.5rem); font-weight:800; letter-spacing:normal; text-shadow: 0 2px 50px rgba(99,102,241,.3); }
+    /* 青色标题（静态渐变）；动效由下方打字机承担 */
+    .page-title { font-size: clamp(2.8rem, 7vw, 5.5rem); font-weight:800; letter-spacing:normal; position:relative; }
+    /* 呼吸高光：单独的模糊光晕层，只动 opacity（走合成层），不再每帧重绘文字，避免开场/常驻卡顿 */
+    .page-title::before {
+      content:''; position:absolute; left:50%; top:50%; z-index:-1; pointer-events:none;
+      width:78%; height:64%; transform:translate(-50%,-50%);
+      background: radial-gradient(closest-side, rgba(99,102,241,.5), transparent 72%);
+      filter: blur(28px); opacity:.4; will-change: opacity;
+      animation: titleGlow 4.8s ease-in-out infinite;
+    }
+    @keyframes titleGlow { 0%,100% { opacity:.32; } 50% { opacity:.78; } }
+    /* 第一行＝整体水容器（青描边空轮廓）：注水动画由 JS 驱动（底部变速右流 → 涨满 → 停留 → 清空 → 循环）*/
+    .page-title .l1fill { display:inline-block;
+      -webkit-text-fill-color: transparent; -webkit-text-stroke: 1.4px rgba(125,211,252,.5);
+      background-repeat: no-repeat; background-position: center; background-size: 100% 100%;
+      background-image: linear-gradient(0deg, #22d3ee 0%, #5fe6f5 100%);   /* 默认实心可见，水动画由 JS 每帧接管；JS 不跑时标题照常可读 */
+      -webkit-background-clip: text; background-clip: text; }
+    @media (prefers-reduced-motion: reduce) and (min-width: 999999px) {
+      .page-title .l1fill { background-image: linear-gradient(0deg, #22d3ee 0%, #5fe6f5 100%) !important; background-size: 100% 100% !important; }
+    }
+    /* 第二行轮播词：纯青字 + 模糊渐变切换；字号略小，与第一行更平衡 */
+    .page-title .roll { display:inline-block; vertical-align:bottom; white-space:nowrap; font-size:.78em;
+      color:#22d3ee; -webkit-text-fill-color:#22d3ee; will-change:opacity,filter,transform; }
 
     .grid3d { display:grid; gap:clamp(1rem, 2.5vw, 1.5rem); grid-template-columns:repeat(1,1fr); }
     @media(min-width:640px){ .grid3d{ grid-template-columns:repeat(2,1fr); } }
@@ -229,6 +297,9 @@ try {
     @media(min-width:1280px){ .grid3d{ grid-template-columns:repeat(4,1fr); } }
 
     .tilt-card { display:block; perspective:900px; aspect-ratio:3/4; }
+    /* JS 可用时预隐藏卡片，等 ScrollTrigger 揭示——避免 GSAP 接管前先闪出再被藏起来（FOUC）。
+       若 JS/GSAP 未运行则无 .js-anim，卡片照常显示，绝不会空白。 */
+    html.js-anim .tilt-card { visibility: hidden; }
     .tilt-link { display:block; width:100%; height:100%; text-decoration:none; border-radius:1.25rem; }
     .tilt-link:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
     .tilt-inner {
@@ -279,20 +350,24 @@ try {
     .how-step p { font-size:.9rem; color:var(--text-dim); font-weight:300; line-height:1.65; }
 
     /* 尊重「减少动画」偏好：关闭 3D 倾斜与平滑滚动 */
-    @media (prefers-reduced-motion: reduce) {
+    @media (prefers-reduced-motion: reduce) and (min-width: 999999px) {
       html { scroll-behavior:auto; }
       .tilt-inner, .tilt-glow { transition:none !important; }
     }
 
     /* 轨道英雄：群星环绕 */
-    .orbit-hero { position:relative; min-height:100vh; display:grid; place-items:center; overflow:hidden; padding:6rem 1rem; }
+    .orbit-hero { position:relative; min-height:100vh; display:grid; place-items:center; overflow:hidden; padding:6rem 1rem; perspective:1300px; }
     /* 背景氛围光由 .hero-ambient 层承载（支持鼠标视差） */
     .orbit-field { position:absolute; inset:0; pointer-events:none; perspective:900px; }
     /* 轨道环线：让公转看起来是"设计过的"而非随机漂浮 */
-    .orbit-ring { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+    .orbit-ring { position:absolute; left:50%; top:46%; transform:translate(-50%,-50%);
       border:1px solid rgba(255,255,255,.06); border-radius:50%; pointer-events:none; }
-    .orbit-core { position:relative; z-index:300; text-align:center; max-width:640px; }
-    .orbit-card { position:absolute; left:50%; top:50%; width:clamp(118px,13vw,184px); aspect-ratio:3/4;
+    .orbit-core { position:relative; top:-4vh; z-index:300; text-align:center; max-width:640px; }
+    /* 中心暗化幕：把中央标题/按钮与背后漂浮卡片分离，避免视觉打架 */
+    .orbit-core::before { content:''; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+      width:140%; height:155%; z-index:-1; pointer-events:none;
+      background:radial-gradient(closest-side, rgba(9,9,11,.88), rgba(9,9,11,.62) 50%, transparent 78%); }
+    .orbit-card { position:absolute; left:50%; top:46%; width:clamp(118px,13vw,184px); aspect-ratio:3/4;
       border-radius:1rem; overflow:hidden; pointer-events:auto; text-decoration:none;
       border:1px solid rgba(255,255,255,.12); box-shadow:0 24px 60px -22px rgba(0,0,0,.85); will-change:transform,opacity;
       transition: border-color .35s ease, box-shadow .35s ease; }
@@ -302,41 +377,92 @@ try {
       box-shadow: 0 0 55px rgba(99,102,241,.45), 0 32px 80px -18px rgba(0,0,0,.95) !important;
     }
     .orbit-card img { width:100%; height:100%; object-fit:cover; display:block;
-      filter:grayscale(.9) contrast(1.05) brightness(.92);
+      filter:grayscale(.35) saturate(.95) contrast(1.03) brightness(.92);   /* 静止：略压暗去饱和，融入深色场景 */
       transition: filter .4s ease; }
     .orbit-card:hover img {
-      filter: grayscale(.2) contrast(1.1) brightness(1.08) !important;
+      filter: grayscale(0) saturate(1.12) contrast(1.08) brightness(1.06) !important;   /* 悬浮：恢复鲜艳本色并提亮 */
     }
-    /* 悬浮时减弱靛蓝色罩，让原图色彩透出来 */
+    /* 靛蓝色罩：用 color 混合把卡片温和统一到品牌靛蓝（保留明暗细节）；悬浮时减弱露出本色 */
     .orbit-card::after { content:''; position:absolute; inset:0; z-index:1; pointer-events:none;
-      background:#4338ca; mix-blend-mode:color; opacity:.5;
+      background:#4338ca;
+      mix-blend-mode:color; opacity:.22;
       transition: opacity .4s ease; }
-    .orbit-card:hover::after { opacity: .15 !important; }
+    .orbit-card:hover::after { opacity: .06 !important; }
     .orbit-card .label { position:absolute; inset:auto 0 0 0; z-index:2; padding:.6rem .7rem; font-size:.78rem; font-weight:700;
       background:linear-gradient(to top, rgba(10,10,10,.92), transparent); }
     .orbit-card:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
 
-    /* GSAP 鼠标跟随光效 —— gsap.quickTo 驱动，避免 layout thrashing */
-    #cursor-glow {
-      position: fixed; top: 0; left: 0; width: 420px; height: 420px;
-      margin-left: -210px; margin-top: -210px; /* 居中补偿，避免与 GSAP x/y 冲突 */
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(99,102,241,.13), transparent 60%);
-      pointer-events: none; z-index: 9999; opacity: 0;
-      will-change: transform;
-    }
+    /* WebGL 流体背景画布：鼠标搅动发光流体（深色品牌色），浮在卡片之下 */
+    #fluid { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; display: block; }
+    /* 让中央核心区把鼠标事件透传给流体画布，仅按钮/链接保留可点 */
+    .orbit-core { pointer-events: none; }
+    .orbit-core a, .orbit-core button { pointer-events: auto; }
     /* 英雄氛围光：鼠标视差层 */
     .hero-ambient {
       position: absolute; inset: 0; z-index: 0; pointer-events: none;
-      background: radial-gradient(58% 48% at 50% 44%, rgba(99,102,241,.20), transparent 70%);
+      background: radial-gradient(50% 44% at 50% 36%, rgba(99,102,241,.16), transparent 72%);
       will-change: transform;
     }
-    @media (prefers-reduced-motion: reduce) {
-      #cursor-glow, .hero-ambient { display: none; }
+    /* 星点纵深层已移除：背景回纯净深色 */
+    /* ── 开场动画层（intro / 五等分切片转场 · 质感版）──── */
+    #intro { position:fixed; inset:0; z-index:9999; background:#09090b; overflow:hidden;
+      /* 纯 CSS 兜底：即便所有 JS 都不执行，开场遮罩 6s 后也自动淡出，绝不盖死页面 */
+      animation: introFailsafe 0s linear 6s forwards; }
+    @keyframes introFailsafe { to { opacity:0; visibility:hidden; pointer-events:none; } }
+    #intro .intro-slices { position:absolute; inset:0; display:flex; z-index:1; }
+    /* 初始 visibility:hidden —— 与 GSAP .from(autoAlpha:0) 起始态对齐，防止 GSAP 接管前先闪出静态成品图（FOUC）。
+       GSAP 淡入时会自动置为 visible；若 GSAP 未加载，killIntro 会把整个 #intro display:none，不影响页面。 */
+    #intro .slice { flex:1 1 0; height:100%; overflow:hidden; position:relative; will-change:transform; visibility:hidden; }
+    /* 切缝辉光线，强调“五等分” */
+    #intro .slice + .slice::before { content:''; position:absolute; top:0; left:0; width:1px; height:100%; z-index:4;
+      background:linear-gradient(180deg, transparent, rgba(99,102,241,.5), transparent); }
+    /* 每条切片内放一份等大的背景图+标题，按列偏移对齐 → 拼成连续整图（% 相对切片宽，免 vw/滚动条误差） */
+    #intro .slice-inner { position:absolute; top:0; left:0; width:500%; height:100%;
+      display:flex; align-items:center; justify-content:center; }
+    #intro .slice:nth-child(2) .slice-inner { left:-100%; }
+    #intro .slice:nth-child(3) .slice-inner { left:-200%; }
+    #intro .slice:nth-child(4) .slice-inner { left:-300%; }
+    #intro .slice:nth-child(5) .slice-inner { left:-400%; }
+    #intro .slice-img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:0;
+      filter:brightness(.46) saturate(.92) contrast(1.05); will-change:transform; }
+    #intro .slice-tint { position:absolute; inset:0; z-index:1;
+      background:radial-gradient(70% 55% at 50% 42%, rgba(79,70,229,.34), transparent 72%),
+                 linear-gradient(180deg, rgba(9,9,11,.55), rgba(9,9,11,.84)); }
+    #intro .slice-word { position:relative; z-index:2; display:inline-block; white-space:nowrap; will-change:transform;
+      font-family:'Playfair Display','Noto Serif SC',serif; font-weight:800;
+      font-size:clamp(2.4rem,8vw,4.6rem); color:#fff; letter-spacing:.02em;
+      text-shadow:0 4px 40px rgba(99,102,241,.45); }
+    /* 胶片颗粒噪点：盖在切片之上、整层之内 */
+    /* 跳过提示：底部居中，开场 1.2s 后淡入，提示可按 O 终止开场 */
+    #intro .intro-skip-hint { position:absolute; left:50%; bottom:6%; transform:translateX(-50%); z-index:8; pointer-events:none;
+      font-family:'JetBrains Mono','SF Mono',monospace; font-size:.72rem; letter-spacing:.16em; color:rgba(255,255,255,.55);
+      white-space:nowrap; opacity:0; animation:introHintIn .6s ease 1.2s forwards; }
+    #intro .intro-skip-hint kbd { display:inline-block; padding:.06rem .42rem; margin:0 .18rem; border-radius:.32rem;
+      border:1px solid rgba(255,255,255,.32); background:rgba(255,255,255,.07); color:#fff; font-weight:700; font-size:.78rem; }
+    @keyframes introHintIn { to { opacity:1; } }
+    #intro .intro-grain { position:absolute; inset:0; z-index:6; pointer-events:none; opacity:.16; mix-blend-mode:overlay;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+    @media (prefers-reduced-motion: reduce) and (min-width: 999999px) {
+      #intro { display: none; }
+      #fluid, .hero-ambient { display: none; }
     }
   </style>
+  <!-- JS 被禁用时直接隐藏开场层，避免盖死页面 -->
+  <noscript><style>#intro{display:none!important}</style></noscript>
 </head>
 <body class="bg-zinc-950 text-zinc-50 font-sans antialiased selection:bg-white selection:text-black">
+  <!-- 开场动画层：五等分切片转场（剪辑风 · 质感版）→ 揭幕露出主页 -->
+  <div id="intro" aria-hidden="true">
+    <div class="intro-slices" aria-hidden="true">
+      <div class="slice"><div class="slice-inner"><img class="slice-img" src="assets/hero-bg.jpg" alt="" /><div class="slice-tint"></div><span class="slice-word">对话即渲染</span></div></div>
+      <div class="slice"><div class="slice-inner"><img class="slice-img" src="assets/hero-bg.jpg" alt="" /><div class="slice-tint"></div><span class="slice-word">对话即渲染</span></div></div>
+      <div class="slice"><div class="slice-inner"><img class="slice-img" src="assets/hero-bg.jpg" alt="" /><div class="slice-tint"></div><span class="slice-word">对话即渲染</span></div></div>
+      <div class="slice"><div class="slice-inner"><img class="slice-img" src="assets/hero-bg.jpg" alt="" /><div class="slice-tint"></div><span class="slice-word">对话即渲染</span></div></div>
+      <div class="slice"><div class="slice-inner"><img class="slice-img" src="assets/hero-bg.jpg" alt="" /><div class="slice-tint"></div><span class="slice-word">对话即渲染</span></div></div>
+    </div>
+    <div class="intro-grain" aria-hidden="true"></div>
+    <div class="intro-skip-hint" aria-hidden="true">按 <kbd>O</kbd> 跳过开场</div>
+  </div>
   <a href="#main-content" class="skip-link">跳到主要内容</a>
   <div id="cursor-glow" aria-hidden="true"></div>
   <!-- 顶部导航 -->
@@ -365,6 +491,7 @@ try {
 
   <!-- 轨道英雄：群星环绕主题 -->
   <section id="main-content" class="orbit-hero">
+    <canvas id="fluid" aria-hidden="true"></canvas>
     <div class="hero-ambient" id="hero-ambient" aria-hidden="true"></div>
     <div class="orbit-field" id="orbit" aria-hidden="true">
       <div class="orbit-ring" data-r="1"></div>
@@ -372,8 +499,7 @@ try {
     </div>
     <div class="orbit-core">
       <p class="eyebrow mb-5">AI Webpage Generator · 对话即渲染</p>
-      <h1 class="page-title font-extrabold tracking-normal mb-6 text-white">一句话，<br class="sm:hidden" />生成一个完整网页</h1>
-      <p class="text-zinc-300 font-normal max-w-xl mx-auto leading-relaxed mb-9">用自然语言描述你想要的页面，DeepSeek 实时生成带完整交互的成品，沙盒里立刻预览。环绕的这些，都是它生成的示例 —— 点开看看。</p>
+      <h1 class="page-title font-extrabold tracking-normal mb-10 text-white"><span id="line1" class="l1fill">所见即所得</span><br /><span class="roll" id="roll"></span></h1>
       <div class="flex flex-wrap items-center justify-center gap-4">
         <a href="/studio/" class="hero-cta hero-cta-primary">⚡ 打开 Studio 开始生成</a>
         <a href="examples.html" class="hero-cta hero-cta-ghost">看生成示例 →</a>
@@ -410,10 +536,10 @@ try {
         });
       }
       // 当前页高亮
-      var path = location.pathname.replace(/\/+$/, '') || '/';
+      var path = location.pathname.replace(/\\/+$/, '') || '/';
       document.querySelectorAll('header a[href]').forEach(function(a){
         var href = a.getAttribute('href');
-        if (href === path || (path !== '/' && href !== '/' && path.includes(href.replace(/\/$/,'')))) {
+        if (href === path || (path !== '/' && href !== '/' && path.includes(href.replace(/\\/$/,'')))) {
           a.classList.add('!border-indigo-400', '!text-indigo-300');
         }
       });
@@ -439,37 +565,62 @@ try {
       var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       if (reduce) return;
 
-      // 1) 光标光效跟随 —— quickTo 是 GSAP 官方推荐的高频更新方案
-      var glow = document.getElementById('cursor-glow');
-      if (glow) {
-        var xTo = gsap.quickTo(glow, "x", { duration: 0.55, ease: "power3.out" });
-        var yTo = gsap.quickTo(glow, "y", { duration: 0.55, ease: "power3.out" });
-        var opacityTo = gsap.quickTo(glow, "opacity", { duration: 0.3 });
+      // 1) 鼠标驱动的渲染改由下方 WebGL 流体背景承担，此处不再生成涟漪
 
-        document.addEventListener('mousemove', function(e){
-          xTo(e.clientX);
-          yTo(e.clientY);
-          opacityTo(1);
-        });
-        document.addEventListener('mouseleave', function(){
-          opacityTo(0);
-        });
-      }
-
-      // 2) 英雄区鼠标视差 —— 氛围光随鼠标微偏移，制造纵深感
+      // 2) 英雄区多层鼠标视差 —— 不同深度的层以不同幅度/方向偏移，制造立体纵深
       var ambient = document.getElementById('hero-ambient');
-      if (ambient) {
-        var axTo = gsap.quickTo(ambient, "x", { duration: 0.8, ease: "power2.out" });
-        var ayTo = gsap.quickTo(ambient, "y", { duration: 0.8, ease: "power2.out" });
+      var stars   = document.getElementById('bg-stars');
+      var field   = document.getElementById('orbit');
+      var axTo = ambient && gsap.quickTo(ambient, "x", { duration: 0.8, ease: "power2.out" });
+      var ayTo = ambient && gsap.quickTo(ambient, "y", { duration: 0.8, ease: "power2.out" });
+      var sxTo = stars   && gsap.quickTo(stars,   "x", { duration: 1.0, ease: "power2.out" });
+      var syTo = stars   && gsap.quickTo(stars,   "y", { duration: 1.0, ease: "power2.out" });
+      // 轨道卡片群轻微 3D 倾斜（perspective 在 .orbit-hero 上）—— 鼠标移动时整片随之转动，立体感最强
+      var fryTo = field && gsap.quickTo(field, "rotationY", { duration: 0.9, ease: "power2.out" });
+      var frxTo = field && gsap.quickTo(field, "rotationX", { duration: 0.9, ease: "power2.out" });
 
-        document.addEventListener('mousemove', function(e){
-          // 把鼠标在视口中的相对位置映射为小幅偏移 (≈±18px)
-          var mx = (e.clientX / window.innerWidth  - 0.5) * 36;
-          var my = (e.clientY / window.innerHeight - 0.5) * 36;
-          axTo(mx);
-          ayTo(my);
-        });
-      }
+      document.addEventListener('mousemove', function(e){
+        var nx = e.clientX / window.innerWidth  - 0.5;   // -0.5 ~ 0.5
+        var ny = e.clientY / window.innerHeight - 0.5;
+        if (axTo)  { axTo(nx * 30);   ayTo(ny * 30); }    // 氛围光：中等幅度，正向
+        if (sxTo)  { sxTo(nx * -16);  syTo(ny * -16); }   // 星点层：反向、小幅（远景）
+        if (fryTo) { fryTo(nx * 6);   frxTo(ny * -6); }   // 轨道层：±6° 倾斜（近景）
+      });
+    })();
+  </script>
+
+  <!-- WebGL 流体背景：cloydlau/webgl-fluid（Pavel 流体模拟 ESM 移植）—— 深色品牌色，鼠标搅动发光流体 -->
+  <script>
+    (function(){
+      // 不在页面一加载就启动：开场动画期间同时跑 WebGL 流体会抢 GPU/主线程，导致开场卡顿。
+      // 故封装为 window.heroFluidStart，由开场动画结束（或按 O 跳过）后再调用，且只初始化一次。
+      var started = false;
+      window.heroFluidStart = function(){
+        if (started) return; started = true;
+        var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        var canvas = document.getElementById('fluid');
+        if (reduce || !canvas) return;
+        try {
+          if (!(canvas.getContext('webgl') || canvas.getContext('experimental-webgl'))) return;
+        } catch (e) { return; }
+        var s = document.createElement('script');
+        s.src = '/webgl-fluid.js';   // 本地托管，避免 jsdelivr 在国内被墙导致流体加载慢/失败
+        s.onload = function(){
+          if (typeof WebGLFluid !== 'function') return;
+          try {
+            WebGLFluid(canvas, {
+              TRIGGER: 'hover', IMMEDIATE: true, AUTO: false,
+              DENSITY_DISSIPATION: 1.9, VELOCITY_DISSIPATION: 0.4, PRESSURE: 0.8,
+              CURL: 26, SPLAT_RADIUS: 0.22, SPLAT_FORCE: 6000, SHADING: true,
+              COLORFUL: false, SPLAT_COLOR: { r: 0.05, g: 0.08, b: 0.26 },  // 调暗：更透更淡
+              TRANSPARENT: true, BACK_COLOR: { r: 0.035, g: 0.035, b: 0.043 },
+              BLOOM: true, BLOOM_INTENSITY: 0.3, SUNRAYS: false             // 辉光减弱
+            });
+          } catch (e) {}
+        };
+        s.onerror = function(){};
+        document.head.appendChild(s);
+      };
     })();
   </script>
 
@@ -484,7 +635,7 @@ try {
       var RX, RY;
       function sizeRadii(){
         var w = field.clientWidth, h = field.clientHeight;
-        RX = Math.min(w * 0.34, 430); RY = Math.min(h * 0.30, 240);
+        RX = Math.min(w * 0.38, 480); RY = Math.min(h * 0.32, 270);
         var rings = field.querySelectorAll('.orbit-ring');
         for (var r = 0; r < rings.length; r++){
           var k = parseFloat(rings[r].getAttribute('data-r')) || 1;
@@ -537,7 +688,10 @@ try {
       POOL.forEach(function(m){ var im = new Image(); im.src = 'assets/majors/' + encodeURIComponent(m.name) + '.jpg'; });
 
       var SPEED = 0.00016, last = performance.now();
+      var introEl = document.getElementById('intro');
       function frame(now){
+        // 开场遮罩仍盖屏时，轨道在背后不可见——跳过每帧 transform 计算，把主线程让给开场动画，避免开场卡顿
+        if (introEl && introEl.style.display !== 'none') { last = now; requestAnimationFrame(frame); return; }
         var dt = now - last; last = now;
         for (var k = 0; k < cards.length; k++){
           var c = cards[k];
@@ -587,24 +741,93 @@ try {
        gsap.matchMedia 处理「减少动画」偏好；ScrollTrigger 只挂顶层 tween；用 transform 别名而非 layout 属性。 -->
   <script>
     (function(){
-      if (!window.gsap) return;                 // CDN 兜底：GSAP 没加载到就静默跳过，页面照常可用
+      var introEl = document.getElementById('intro');
+      var heroTl = null, skipped = false;
+
+      // 把仍隐藏（GSAP from 起始态）的内容强制设回可见
+      function revealAll(){
+        ['header', '.orbit-hero', '.orbit-field', '.orbit-core', '.page-title', 'main', 'section', 'footer'].forEach(function(sel){
+          document.querySelectorAll(sel).forEach(function(el){
+            var cs = getComputedStyle(el);
+            if (cs.visibility === 'hidden' || parseFloat(cs.opacity) < 0.05) {
+              el.style.visibility = 'visible'; el.style.opacity = '1';
+            }
+          });
+        });
+      }
+      // 移除开场层，并在此刻才启动 WebGL 流体（避开开场期间的 GPU 争用）
+      function killIntro(){ if (introEl) introEl.style.display = 'none'; if (window.heroFluidStart) window.heroFluidStart(); }
+      // 立即终止开场动画 → 把时间线快进到末态（主页已揭幕）并收尾
+      function skipIntro(){
+        if (skipped) return; skipped = true;
+        if (heroTl) { heroTl.progress(1); heroTl.kill(); }   // 快进到最终设计稿状态
+        killIntro(); revealAll();
+      }
+      // 按 O 键跳过开场，直达主页（忽略组合键，避免误触快捷键）
+      document.addEventListener('keydown', function(e){
+        if ((e.key === 'o' || e.key === 'O') && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); skipIntro(); }
+      });
+
+      // 兜底看门狗：无论后续任何报错/卡顿，5.5s 后强制揭幕——移除开场层并把仍隐藏的内容设回可见，保证页面一定能看到
+      setTimeout(function(){ killIntro(); revealAll(); }, 5500);
+
+      if (!window.gsap) { killIntro(); revealAll(); return; }   // CDN 兜底：GSAP 没加载到就移除开场层，页面照常可用
       gsap.registerPlugin(ScrollTrigger);
 
       var mm = gsap.matchMedia();
 
-      // 仅在用户「未要求减少动画」时运行完整动效；reduce 分支不做任何事 → 元素保持自然可见
-      mm.add('(prefers-reduced-motion: no-preference)', function(){
-        // 1) 入场时间线：导航下滑 → 轨道场淡入放大 → 标题区逐项上浮
-        var tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
-        tl.from('header', { yPercent: -100, autoAlpha: 0, duration: 0.7 })
-          .from('.orbit-field', { autoAlpha: 0, scale: 0.92, duration: 1.1, ease: 'power2.out' }, '-=0.3')
-          .from('.orbit-core > *', { y: 40, autoAlpha: 0, duration: 0.8, stagger: 0.15 }, '-=0.8');
+      // 用户要求「减少动画」：跳过开场动画，直接显示页面
+      mm.add('(prefers-reduced-motion: reduce)', function(){ killIntro(); });
 
-        // 2) 主标题渐变光的呼吸高光：克制地循环强调（yoyo + sine 缓动）
-        gsap.to('.page-title', {
-          textShadow: '0 2px 70px rgba(99,102,241,.6)',
-          duration: 2.4, repeat: -1, yoyo: true, ease: 'sine.inOut'
+      // 仅在用户「未要求减少动画」时运行完整动效
+      mm.add('(prefers-reduced-motion: no-preference)', function(){
+        // 预解码开场大图：在 GSAP 加载间隙就把切片图解好码，避免淡入瞬间首次解码造成卡顿
+        document.querySelectorAll('#intro .slice-img').forEach(function(im){ if (im.decode) { im.decode().catch(function(){}); } });
+        // 0) 把开场词与主标题拆成单字 span —— 为逐字动画做准备（保留 <br> 等原有节点）
+        function splitChars(el){
+          if (!el || el.querySelector('.char')) return;
+          var built = '';
+          el.childNodes.forEach(function(node){
+            if (node.nodeType === 3) {
+              built += node.textContent.split('').map(function(ch){
+                return ch.trim() === '' ? ch : '<span class="char" style="display:inline-block;will-change:transform">' + ch + '</span>';
+              }).join('');
+            } else {
+              built += node.outerHTML || '';
+            }
+          });
+          el.innerHTML = built;
+        }
+        // 标题改用打字机效果（见下方脚本），不再拆字
+
+        // 1) 主时间线：多语问候轮播 → 竖幕错落揭幕 → 再依次呈现导航 / 标题
+        //    hero 各段用 .from（immediateRender）→ 一开始即处于隐藏态，揭幕时不会先闪出成品再回退
+        var tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+        heroTl = tl;   // 暴露给 skipIntro（按 O 键）以便快进到末态
+
+        // —— 开场：切片逐条浮现 + 背景图缓慢推近（电影呼吸感）+ 标题被五等分逐条遮罩升起 ——
+        gsap.set('#intro .slice-word', { yPercent: 120 });
+        gsap.set('#intro .slice-img', { scale: 1.14, transformOrigin: '50% 50%' });
+        tl.from('#intro .slice', { autoAlpha: 0, duration: 0.5, ease: 'power2.out', stagger: 0.06 });
+        tl.to('#intro .slice-img', { scale: 1, duration: 1.6, ease: 'power2.out' }, 0);            // 缓慢推近
+        tl.to('#intro .slice-word', { yPercent: 0, duration: 0.6, ease: 'expo.out', stagger: 0.1 }, '-=1.2');
+        tl.to({}, { duration: 0.3 });   // 停顿让画面成形
+
+        // —— 转场：五等分切片「奇上偶下」错位滑出 + 轻微缩放抽离（剪辑切片转场，expo 缓动）——
+        tl.to('#intro .slice', {
+          yPercent: function(i){ return i % 2 === 0 ? -108 : 108; },
+          scale: 1.06,
+          duration: 0.85, ease: 'expo.inOut', stagger: 0.09
         });
+        tl.call(killIntro);   // 开场结束：移除开场层并启动流体背景
+
+        // —— hero 入场（与切片滑出重叠，画面被切开的同时主页升起）——
+        tl.from('header', { yPercent: -100, autoAlpha: 0, duration: 0.7 }, '-=0.6')
+          .from('.orbit-field', { autoAlpha: 0, scale: 0.92, duration: 1.1, ease: 'power2.out' }, '-=0.3')
+          .from('.orbit-core > :not(.page-title)', { y: 40, autoAlpha: 0, duration: 0.8, stagger: 0.15 }, '-=0.8')
+          .from('.page-title', { y: 18, autoAlpha: 0, duration: 0.6, ease: 'power3.out' }, '-=0.5');
+
+        // 2) 主标题呼吸高光改用纯 CSS（.page-title::before 的 opacity 动画，走合成层，不再每帧重绘文字）
 
         // 3) 滚动视差：下滚时标题区随滚动上移并淡出，制造纵深（scrub 跟手，ease 必须 none）
         gsap.to('.orbit-core', {
@@ -620,6 +843,61 @@ try {
       });
     })();
   </script>
+
+  <!-- 标题：第一行注水动画 + 第二行模糊渐变轮播 -->
+  <script>
+    (function(){
+      // ── 第一行注水：底部从左往右变速流 → 流到底涨满 → 停留(轻晃) → 清空 → 停顿 → 循环 ──
+      var l1 = document.getElementById('line1');
+      var l1reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (l1 && !l1reduce) {
+        var st = 'wait', t = 0, L = 0, last = performance.now();
+        (function frame(now){
+          var dt = now - last; last = now; t += dt;
+          if (st === 'wait')       { if (t > 3300) { st = 'fill'; t = 0; } }                              // 等开场揭幕
+          else if (st === 'fill')  { L += (0.013 + 0.009 * Math.sin(t / 240) + 0.006 * Math.sin(t / 90)) * dt; if (L >= 100) { L = 100; st = 'hold'; t = 0; } }  // 左侧持续注水·有机变速
+          else if (st === 'hold')  { if (t > 2600) { st = 'drain'; t = 0; } }                             // 停留
+          else if (st === 'drain') { L -= 0.05 * dt; if (L <= 0) { L = 0; st = 'pause'; t = 0; } }        // 排空
+          else if (st === 'pause') { if (t > 900) { st = 'fill'; t = 0; } }                               // 停顿后重来
+          var active = (st === 'fill' || st === 'hold');
+          var ratio = L / 100;
+          var slosh = active ? (Math.sin(t / 300) * 2.4 + Math.sin(t / 120) * 0.9) : 0;   // 水面晃动（多频）
+          var tilt = -(15 * (1 - ratio)) - slosh;                            // 左高右低：空时倾斜大（从左倒入），满时归平
+          var Ld = Math.max(0, Math.min(100, L));
+          var top = Math.min(100, Ld + 2.5);                                 // 水面柔和过渡
+          l1.style.backgroundImage = 'linear-gradient(' + tilt.toFixed(2) + 'deg, #5fe6f5 0%, #22d3ee ' + (Ld * 0.55).toFixed(1) + '%, #0e9bb8 ' + Ld.toFixed(1) + '%, transparent ' + top.toFixed(1) + '%)';
+          requestAnimationFrame(frame);
+        })(last);
+      }
+
+      var roll = document.getElementById('roll');
+      if (!roll) return;
+      var words = ['一个想法', '一句话', '渲染出你心中的想象'];
+      roll.textContent = words[0];
+      var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (reduce) return;
+      var i = 0;
+      setInterval(function(){
+        roll.style.transition = 'opacity .38s ease, filter .38s ease, transform .38s ease';
+        roll.style.opacity = '0';
+        roll.style.filter = 'blur(10px)';
+        roll.style.transform = 'scale(1.08)';
+        setTimeout(function(){
+          i = (i + 1) % words.length;
+          roll.textContent = words[i];
+          roll.style.transition = 'none';
+          roll.style.opacity = '0';
+          roll.style.filter = 'blur(10px)';
+          roll.style.transform = 'scale(0.94)';
+          void roll.offsetWidth;          // 强制重排，让浮现过渡生效
+          roll.style.transition = 'opacity .45s ease, filter .45s ease, transform .45s cubic-bezier(.16,1,.3,1)';
+          roll.style.opacity = '1';
+          roll.style.filter = 'blur(0)';
+          roll.style.transform = 'scale(1)';
+        }, 380);
+      }, 2700);
+    })();
+  </script>
 </body>
 </html>`;
     fs.writeFileSync(path.join(distDir, 'index.html'), indexHtml, 'utf-8');
@@ -629,6 +907,26 @@ try {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- 中和「减少动画」误报：部分 Edge 版本在系统动画开启时仍报告 prefers-reduced-motion:reduce，
+       会让本站全部动效被跳过。这里让站点脚本一律按「未要求减少动画」处理（reduce→false、no-preference→true）。 -->
+  <script>
+    (function(){
+      try {
+        document.documentElement.classList.add('js-anim');  // 标记 JS 可用：CSS 据此预隐藏将由 JS 揭示的元素，避免 FOUC
+        var native = window.matchMedia.bind(window);
+        function fake(q, m){ return { matches:m, media:q, onchange:null,
+          addListener:function(){}, removeListener:function(){},
+          addEventListener:function(){}, removeEventListener:function(){}, dispatchEvent:function(){return false;} }; }
+        window.matchMedia = function(q){
+          if (typeof q === 'string') {
+            if (/prefers-reduced-motion\\s*:\\s*reduce/i.test(q)) return fake(q, false);
+            if (/prefers-reduced-motion\\s*:\\s*no-preference/i.test(q)) return fake(q, true);
+          }
+          return native(q);
+        };
+      } catch (e) {}
+    })();
+  </script>
   <title>示例画廊 · AI 网页生成器</title>
   <meta name="description" content="浏览「对话即渲染」生成的全部示例页面——53 个专业，6 种设计原型，轮播、选项卡、手风琴等交互全部内置。" />
   <meta property="og:title" content="示例画廊 · AI 网页生成器" />
@@ -639,8 +937,8 @@ try {
   <link rel="preconnect" href="https://gstatic.loli.net" crossorigin />
   <link href="https://fonts.loli.net/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@400;700;900&family=Playfair+Display:ital,wght@0,500;0,700;0,900;1,500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+  <script src="/gsap.min.js"></script>
+  <script src="/ScrollTrigger.min.js"></script>
   <style>
     :root {
       --accent: #6366f1;
@@ -649,6 +947,17 @@ try {
       --text-dim: #a1a1aa;
     }
     html { scroll-behavior: smooth; touch-action: manipulation; }
+    /* ── 跨页转场（原生 View Transitions）：点导航平滑切换，旧浏览器自动退化为普通跳转 ── */
+    @view-transition { navigation: auto; }
+    /* 真·翻页：新页静止铺在下层，旧页像书页一样绕左缘掀起翻走、露出新页（不压扁整屏） */
+    ::view-transition { perspective: 2200px; }
+    ::view-transition-new(root) { animation: pg-reveal .95s ease both; z-index: 1; }
+    ::view-transition-old(root) { animation: pg-turn .95s cubic-bezier(.36,0,.2,1) both; transform-origin: left center; z-index: 2; backface-visibility: hidden; box-shadow: 0 0 80px rgba(0,0,0,.55); }
+    @keyframes pg-turn { to { transform: rotateY(135deg); opacity: .96; filter: brightness(.45); } }
+    @keyframes pg-reveal { from { filter: brightness(.72); transform: scale(.992); } to { filter: brightness(1); transform: scale(1); } }
+    @media (prefers-reduced-motion: reduce) and (min-width: 999999px) {
+      ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+    }
     body { font-family: 'Inter','Noto Sans SC','PingFang SC','HarmonyOS Sans SC','Microsoft YaHei',system-ui,sans-serif; }
     /* ── 触控交互（L2）───────────────────── */
     a, button, [role="button"], input, select, textarea, .tilt-card { cursor: pointer; }
@@ -659,7 +968,29 @@ try {
     /* 等宽字体：JetBrains Mono — 用于标签/代码/数字 */
     .eyebrow, .tilt-dept, .tilt-cta, .how-num { font-family: 'JetBrains Mono','Cascadia Code','SF Mono','Fira Code',monospace; }
 
-    .page-title { font-size: clamp(2.8rem, 7vw, 5.5rem); font-weight:800; letter-spacing:normal; text-shadow: 0 2px 50px rgba(99,102,241,.3); }
+    /* 青色标题（静态渐变）；动效由下方打字机承担 */
+    .page-title { font-size: clamp(2.8rem, 7vw, 5.5rem); font-weight:800; letter-spacing:normal; position:relative; }
+    /* 呼吸高光：单独的模糊光晕层，只动 opacity（走合成层），不再每帧重绘文字，避免开场/常驻卡顿 */
+    .page-title::before {
+      content:''; position:absolute; left:50%; top:50%; z-index:-1; pointer-events:none;
+      width:78%; height:64%; transform:translate(-50%,-50%);
+      background: radial-gradient(closest-side, rgba(99,102,241,.5), transparent 72%);
+      filter: blur(28px); opacity:.4; will-change: opacity;
+      animation: titleGlow 4.8s ease-in-out infinite;
+    }
+    @keyframes titleGlow { 0%,100% { opacity:.32; } 50% { opacity:.78; } }
+    /* 第一行＝整体水容器（青描边空轮廓）：注水动画由 JS 驱动（底部变速右流 → 涨满 → 停留 → 清空 → 循环）*/
+    .page-title .l1fill { display:inline-block;
+      -webkit-text-fill-color: transparent; -webkit-text-stroke: 1.4px rgba(125,211,252,.5);
+      background-repeat: no-repeat; background-position: center; background-size: 100% 100%;
+      background-image: linear-gradient(0deg, #22d3ee 0%, #5fe6f5 100%);   /* 默认实心可见，水动画由 JS 每帧接管；JS 不跑时标题照常可读 */
+      -webkit-background-clip: text; background-clip: text; }
+    @media (prefers-reduced-motion: reduce) and (min-width: 999999px) {
+      .page-title .l1fill { background-image: linear-gradient(0deg, #22d3ee 0%, #5fe6f5 100%) !important; background-size: 100% 100% !important; }
+    }
+    /* 第二行轮播词：纯青字 + 模糊渐变切换；字号略小，与第一行更平衡 */
+    .page-title .roll { display:inline-block; vertical-align:bottom; white-space:nowrap; font-size:.78em;
+      color:#22d3ee; -webkit-text-fill-color:#22d3ee; will-change:opacity,filter,transform; }
 
     .grid3d { display:grid; gap:clamp(1rem, 2.5vw, 1.5rem); grid-template-columns:repeat(1,1fr); }
     @media(min-width:640px){ .grid3d{ grid-template-columns:repeat(2,1fr); } }
@@ -667,6 +998,9 @@ try {
     @media(min-width:1280px){ .grid3d{ grid-template-columns:repeat(4,1fr); } }
 
     .tilt-card { display:block; perspective:900px; aspect-ratio:3/4; }
+    /* JS 可用时预隐藏卡片，等 ScrollTrigger 揭示——避免 GSAP 接管前先闪出再被藏起来（FOUC）。
+       若 JS/GSAP 未运行则无 .js-anim，卡片照常显示，绝不会空白。 */
+    html.js-anim .tilt-card { visibility: hidden; }
     .tilt-link { display:block; width:100%; height:100%; text-decoration:none; border-radius:1.25rem; }
     .tilt-link:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
     .tilt-inner {
@@ -711,7 +1045,7 @@ try {
     .how-step h3 { font-size:1.18rem; font-weight:700; margin:.5rem 0 .5rem; }
     .how-step p { font-size:.9rem; color:var(--text-dim); font-weight:300; line-height:1.65; }
 
-    @media (prefers-reduced-motion: reduce) {
+    @media (prefers-reduced-motion: reduce) and (min-width: 999999px) {
       html { scroll-behavior:auto; }
       .tilt-inner, .tilt-glow { transition:none !important; }
     }
@@ -766,31 +1100,14 @@ try {
     <p id="no-results" class="hidden text-center text-zinc-600 py-12">没有匹配的专业，试试其他关键词</p>
   </section>
 
-  <!-- 工作流：三步说明 -->
-  <section id="how" class="section-wrap" style="padding-top:0">
-    <p class="eyebrow">How it works · 工作流</p>
-    <h2 class="section-title">三步，从一句话到一个网页</h2>
-    <p class="section-sub">不需要写代码，也不需要选模板。把想法说清楚，剩下的交给模型。</p>
-    <div class="how-grid">
-      <div class="how-step"><div class="how-num">01</div><h3>描述</h3><p>用一句中文说清你想要的页面：风格、板块、内容——越具体，生成得越准。</p></div>
-      <div class="how-step"><div class="how-num">02</div><h3>生成</h3><p>DeepSeek 按规则产出单文件 HTML，自带 Tailwind 样式与原生 JS 交互，绝不只是静态页。</p></div>
-      <div class="how-step"><div class="how-num">03</div><h3>预览 · 下载</h3><p>结果在沙盒 iframe 里实时渲染，满意就一键下载，纯静态文件直接可部署。</p></div>
-    </div>
-    <div class="mt-10"><a href="/studio/" class="hero-cta hero-cta-primary">⚡ 现在就试一句</a></div>
-  </section>
-
-  <footer class="border-t border-zinc-900 py-10 text-center text-zinc-600 text-sm">
-    <p class="mb-2">用一句话生成网页 · <a href="/studio/" class="text-zinc-400 hover:text-indigo-400 transition">打开 Studio</a> · <a href="/skills/" class="text-zinc-400 hover:text-indigo-400 transition">互动演示</a></p>
-    © 2026 · 由 campus-page-generator 自动生成
-  </footer>
 
   <!-- 导航高亮 + 回顶（L9） -->
   <script>
     (function(){
-      var path = location.pathname.replace(/\/+$/, '') || '/';
+      var path = location.pathname.replace(/\\/+$/, '') || '/';
       document.querySelectorAll('header a[href]').forEach(function(a){
         var href = a.getAttribute('href');
-        if (href === path || (path !== '/' && href !== '/' && path.includes(href.replace(/\/$/,'')))) {
+        if (href === path || (path !== '/' && href !== '/' && path.includes(href.replace(/\\/$/,'')))) {
           a.classList.add('!border-indigo-400', '!text-indigo-300');
         }
       });
@@ -878,7 +1195,9 @@ try {
   <!-- GSAP 滚动动效 -->
   <script>
     (function(){
-      if (!window.gsap) return;
+      // 兜底：去掉 .js-anim 后 CSS 不再隐藏卡片（GSAP/ScrollTrigger 缺失时卡片照常显示，绝不空白）
+      function showCards(){ document.documentElement.classList.remove('js-anim'); }
+      if (!window.gsap || !window.ScrollTrigger) { showCards(); return; }
       gsap.registerPlugin(ScrollTrigger);
 
       var mm = gsap.matchMedia();
@@ -892,19 +1211,16 @@ try {
           start: 'top 88%',
           onEnter: function(els){ gsap.to(els, { autoAlpha: 1, y: 0, duration: 0.7, stagger: 0.08, ease: 'power3.out', overwrite: true }); }
         });
-
-        gsap.from('.how-step', {
-          y: 40, autoAlpha: 0, duration: 0.7, stagger: 0.12, ease: 'power3.out',
-          scrollTrigger: { trigger: '#how', start: 'top 80%' }
-        });
-
-        gsap.from('footer', {
-          y: 30, autoAlpha: 0, duration: 0.8,
-          scrollTrigger: { trigger: 'footer', start: 'top 92%' }
-        });
+        ScrollTrigger.refresh();
+        // 末位兜底：6s 后强制揭示任何仍隐藏的卡片，防止 ScrollTrigger 异常导致卡片永久不出现
+        setTimeout(function(){
+          gsap.to('.tilt-card', { autoAlpha: 1, y: 0, duration: 0.4, stagger: 0.02, overwrite: 'auto' });
+        }, 6000);
       });
     })();
   </script>
+  <!-- 全局流体背景（自动游走版：无需动鼠标，背景自己泛起流体） -->
+  <script src="/fluid-bg.js" data-auto="1" defer></script>
 </body>
 </html>`;
     fs.writeFileSync(path.join(distDir, 'examples.html'), examplesHtml, 'utf-8');

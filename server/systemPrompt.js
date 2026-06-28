@@ -40,6 +40,44 @@ const SYSTEM_PROMPT = `你是一名顶级的前端工程师 + 视觉设计师，
 - 文案具体、可信、贴合用户主题，绝不用「Lorem ipsum」之类占位文字。
 - 响应式：移动端到桌面端都要好看。
 
+## 六、可编辑结构标记（让用户能在预览区可视化选中/编辑，务必遵守）
+给页面中每个重要结构元素加上下列属性，方便后续定位与局部编辑（只加属性，绝不因此改变任何视觉或布局）：
+- data-editable="true"
+- data-node-id="唯一英文短id"（全页唯一，绝不重复，如 hero / nav / feature-card-1）
+- data-node-type="header|nav|section|hero|card|title|text|button|image|form|list|footer" 中选最贴切的
+- data-node-name="给非技术用户看的中文名"，如：顶部导航栏 / 首页首屏 / 主标题 / 功能卡片 / 行动号召按钮 / 配图 / 页脚
+至少覆盖：header、nav、每个 section、hero 区、主标题 h1/h2、关键段落、每个 button、每张 img、每个内容/功能/价格卡片、footer。
+
 直接输出完整、交互齐全、可立即运行的 HTML 成品。`;
 
-module.exports = { SYSTEM_PROMPT };
+/**
+ * 多页网站附加指令 —— 当用户勾选「生成多页网站」时追加到系统提示后面。
+ * 仍然是单文件，但内含多个完整页面 + 顶部导航 + 原生 JS 路由，能在 iframe 沙盒里无刷新切换。
+ */
+const MULTIPAGE_ADDENDUM = `
+
+## ★ 多页网站模式（本次必须严格遵守）
+用户要求生成「多页网站」。你依然只输出一个 HTML 文件，但它要包含多个内容各异的完整页面，并能在 iframe 内无刷新切换：
+1. 每个页面用 <section class="mp-page" id="page-英文名" data-title="中文页名"> 包裹；第一个页面正常显示，其余一律加 style="display:none"。
+2. 顶部放一个所有页面共享的导航栏，每个入口形如 <a href="#page-about" data-nav="page-about">关于</a>，覆盖用户要求的全部页面，并标出当前页高亮。
+3. 写一段原生 JS 路由：
+   - 点击 [data-nav] 时隐藏所有 .mp-page、只显示目标页，并给切换加淡入动画；
+   - 同步更新 location.hash 与导航高亮态；
+   - 监听 window 的 hashchange，支持浏览器前进 / 后退；
+   - 页面首次加载按当前 location.hash 显示对应页，无 hash 时显示第一个页面。
+4. 绝不使用 history.pushState、不依赖服务器或真实 URL（运行在 srcdoc 沙盒里）；纯前端 show/hide + location.hash 即可。
+5. 每个页面的内容必须真实、充实、彼此不同（首页 ≠ 关于 ≠ 服务 ≠ 联系），各自有 Hero / 多个区块 / 页脚等结构，绝不是空壳或互相重复。
+6. 所有页面共用同一套配色与设计语言，保证整站视觉统一。
+7. 仍要满足前面所有交互与审美规则；若内容较多，优先保证每个页面结构完整、不被截断。`;
+
+/**
+ * 根据生成选项拼出最终系统提示。
+ * @param {{multipage?: boolean}} [options]
+ */
+function buildSystemPrompt(options) {
+  let prompt = SYSTEM_PROMPT;
+  if (options && options.multipage) prompt += MULTIPAGE_ADDENDUM;
+  return prompt;
+}
+
+module.exports = { SYSTEM_PROMPT, MULTIPAGE_ADDENDUM, buildSystemPrompt };

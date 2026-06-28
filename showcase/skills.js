@@ -1,367 +1,535 @@
 /* ============================================================
-   专业招新互动页 · 10 个原生 JS 功能（全部手写，可逐行讲解）
-   作者：徐致远
-   说明：每个功能用注释标了序号，对应页面里的 "JS ①~⑩" 徽标。
+   网页能力规格书 —— 6 项能力的可视化演示逻辑
+   01~03 原生 JS / 04~06 真正的 Vue 3（本地 vendor，规避国内 CDN）
    ============================================================ */
+(function () {
+  'use strict';
 
-// 小工具：按 id 取元素
-const $ = (id) => document.getElementById(id);
-
-
-/* ---------- ⑦ 鼠标跟随光效 ----------
-   原理：GSAP quickTo 驱动高频更新，x/y 是 transform 别名，零 layout thrashing。
-   对比旧版 left/top（触发布局重算），性能大幅提升。 */
-const glow = $("cursor-glow");
-if (glow && window.gsap) {
-  const gxTo = gsap.quickTo(glow, "x", { duration: 0.5, ease: "power3.out" });
-  const gyTo = gsap.quickTo(glow, "y", { duration: 0.5, ease: "power3.out" });
-  const goTo = gsap.quickTo(glow, "opacity", { duration: 0.25 });
-  document.addEventListener("mousemove", (e) => {
-    gxTo(e.clientX);
-    gyTo(e.clientY);
-    goTo(1);
-  });
-  document.addEventListener("mouseleave", () => goTo(0));
-}
-
-
-/* ---------- ① 轮播图 ----------
-   原理：一条横向轨道装着 N 张图，改 transform: translateX 来切换；
-   配自动播放 + 左右按钮 + 圆点指示。 */
-(function carousel() {
-  const track = $("carousel");
-  const slides = track.children;             // 所有幻灯片
-  const total = slides.length;
-  const dotsBox = $("dots");
-  let index = 0;                             // 当前第几张
-
-  // 生成底部圆点
-  for (let i = 0; i < total; i++) {
-    const d = document.createElement("button");
-    d.className = "w-2.5 h-2.5 rounded-full bg-white/40 transition";
-    d.addEventListener("click", () => go(i));
-    dotsBox.appendChild(d);
-  }
-
-  function go(i) {
-    index = (i + total) % total;            // 取模实现循环
-    track.style.transform = "translateX(" + -index * 100 + "%)";
-    [...dotsBox.children].forEach((d, k) =>
-      d.classList.toggle("bg-white", k === index)
-    );
-  }
-
-  $("next").addEventListener("click", () => go(index + 1));
-  $("prev").addEventListener("click", () => go(index - 1));
-
-  let timer = setInterval(() => go(index + 1), 4000);   // 自动播放
-  // 鼠标移上去暂停，移开继续
-  track.parentElement.addEventListener("mouseenter", () => clearInterval(timer));
-  track.parentElement.addEventListener("mouseleave", () => {
-    timer = setInterval(() => go(index + 1), 4000);
-  });
-
-  go(0);
-})();
-
-
-/* ---------- ② 弹出窗口（通用 modal） ----------
-   暴露一个 openModal()，供"报名成功""登录成功"等场景复用。 */
-function openModal(title, text, icon) {
-  $("modal-title").textContent = title;
-  $("modal-text").textContent = text;
-  $("modal-icon").textContent = icon || "🎉";
-  $("modal").classList.remove("hidden");
-}
-function closeModal() {
-  $("modal").classList.add("hidden");
-}
-$("modal-close").addEventListener("click", closeModal);
-$("modal-mask").addEventListener("click", closeModal);   // 点遮罩也关闭
-
-
-/* ---------- ③ 本地存储实现登录 ----------
-   原理：用 localStorage 当"数据库"。
-   - 用户表存在 localStorage 的 "users"（一个 {用户名:密码} 对象）
-   - 当前登录态存在 "currentUser"
-   注意：明文存密码仅为教学演示，真实项目要加密。 */
-function getUsers() {
-  return JSON.parse(localStorage.getItem("users") || "{}");
-}
-function setLoginState() {
-  const cur = localStorage.getItem("currentUser");
-  if (cur) {
-    $("login-state").textContent = "已登录：" + cur;
-    $("login-state").className = "text-emerald-400";
-    $("btn-login").classList.add("hidden");
-    $("btn-register").classList.add("hidden");
-    $("btn-logout").classList.remove("hidden");
-  } else {
-    $("login-state").textContent = "未登录";
-    $("login-state").className = "text-zinc-400";
-    $("btn-login").classList.remove("hidden");
-    $("btn-register").classList.remove("hidden");
-    $("btn-logout").classList.add("hidden");
-  }
-}
-function loginMsg(text, ok) {
-  const el = $("login-msg");
-  el.textContent = text;
-  el.className = "text-xs mt-4 h-4 " + (ok ? "text-emerald-400" : "text-red-400");
-}
-
-$("btn-register").addEventListener("click", () => {
-  const u = $("username").value.trim();
-  const p = $("password").value;
-  if (!u || !p) return loginMsg("用户名和密码不能为空", false);
-  const users = getUsers();
-  if (users[u]) return loginMsg("该用户名已存在", false);
-  users[u] = p;
-  localStorage.setItem("users", JSON.stringify(users));
-  loginMsg("注册成功，请登录", true);
-});
-
-$("btn-login").addEventListener("click", () => {
-  const u = $("username").value.trim();
-  const p = $("password").value;
-  const users = getUsers();
-  if (users[u] && users[u] === p) {
-    localStorage.setItem("currentUser", u);
-    setLoginState();
-    openModal("登录成功", "欢迎你，" + u + "！", "👋");
-  } else {
-    loginMsg("用户名或密码错误", false);
-  }
-});
-
-$("btn-logout").addEventListener("click", () => {
-  localStorage.removeItem("currentUser");
-  setLoginState();
-  loginMsg("已退出登录", true);
-});
-
-setLoginState();   // 页面加载时恢复登录态
-
-
-/* ---------- ⑥ 切换选项卡 ----------
-   原理：点按钮 → 高亮当前按钮 + 显示对应面板、隐藏其它。 */
-document.querySelectorAll(".tab-btn").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    const i = btn.dataset.tab;
-    document.querySelectorAll(".tab-btn").forEach((b) => {
-      const on = b === btn;
-      b.classList.toggle("border-indigo-500", on);
-      b.classList.toggle("text-white", on);
-      b.classList.toggle("border-transparent", !on);
-      b.classList.toggle("text-zinc-500", !on);
+  /* ---------- 通用：滚动揭示 ---------- */
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
     });
-    document.querySelectorAll(".tab-panel").forEach((p) =>
-      p.classList.toggle("hidden", p.dataset.panel !== i)
-    );
-  });
-});
+  }, { threshold: 0.12 });
+  document.querySelectorAll('[data-reveal]').forEach(function (el) { io.observe(el); });
 
-
-/* ---------- ⑩ 正则表达式验证 ----------
-   原理：用正则（regex）规定输入必须符合的格式，不符合就提示"不符合"。
-   这里校验手机号：必须 11 位、以 1 开头、第二位是 3-9。
-   正则 /^1[3-9]\d{9}$/ 含义：
-     ^      开头
-     1      第一位是 1
-     [3-9]  第二位是 3 到 9
-     \d{9}  再跟 9 个数字
-     $      结尾（保证总长正好 11 位） */
-const PHONE_RE = /^1[3-9]\d{9}$/;
-
-function checkPhone() {
-  const val = $("su-phone").value.trim();
-  const hint = $("phone-hint");
-  if (val === "") {
-    hint.textContent = "请输入 11 位手机号";
-    hint.className = "text-xs h-4 mb-3 text-zinc-500";
-    return false;
-  }
-  if (PHONE_RE.test(val)) {                       // 符合正则
-    hint.textContent = "✓ 格式符合";
-    hint.className = "text-xs h-4 mb-3 text-emerald-400";
-    return true;
-  } else {                                        // 不符合
-    hint.textContent = "✗ 手机号格式不符合（须 11 位、以 1 开头）";
-    hint.className = "text-xs h-4 mb-3 text-red-400";
-    return false;
-  }
-}
-$("su-phone").addEventListener("input", checkPhone);   // 边输入边实时校验
-
-
-/* ---------- ⑤ 动态表格操作 ----------
-   原理：报名时往 <tbody> 动态插入一行，每行带"删除"按钮；
-   数据同时存 localStorage，刷新后还原。 */
-function getRoster() {
-  return JSON.parse(localStorage.getItem("roster") || "[]");
-}
-function saveRoster(list) {
-  localStorage.setItem("roster", JSON.stringify(list));
-}
-function renderRoster() {
-  const list = getRoster();
-  const body = $("roster-body");
-  body.innerHTML = "";
-  if (list.length === 0) {
-    body.innerHTML =
-      '<tr><td colspan="4" class="text-center text-zinc-600 px-4 py-8">还没有人报名，去上面报一个吧</td></tr>';
-    return;
-  }
-  list.forEach((row, i) => {
-    const tr = document.createElement("tr");
-    tr.className = "border-t border-zinc-800";
-    tr.innerHTML =
-      '<td class="px-4 py-3">' + row.name + "</td>" +
-      '<td class="px-4 py-3">' + row.major + "</td>" +
-      '<td class="px-4 py-3 text-zinc-500">' + row.time + "</td>" +
-      '<td class="px-4 py-3"><button class="text-red-400 hover:text-red-300 text-xs" data-i="' + i + '">删除</button></td>';
-    body.appendChild(tr);
-  });
-  // 给每个删除按钮绑事件
-  body.querySelectorAll("button[data-i]").forEach((b) => {
-    b.addEventListener("click", () => {
-      const list = getRoster();
-      list.splice(Number(b.dataset.i), 1);   // 删掉这一行
-      saveRoster(list);
-      renderRoster();
-    });
-  });
-}
-function addToRoster(name, major) {
-  const list = getRoster();
-  list.push({ name, major, time: new Date().toLocaleString("zh-CN") });
-  saveRoster(list);
-  renderRoster();
-}
-renderRoster();
-
-
-/* ---------- 报名提交：串起 ⑩ 验证 → ⑤ 入表 → ② 弹窗 ---------- */
-$("btn-signup").addEventListener("click", () => {
-  const name = $("su-name").value.trim();
-  const major = $("su-major").value.trim();
-  const msg = $("signup-msg");
-  if (!name || !major) {
-    msg.textContent = "请填写姓名和意向专业";
-    msg.className = "text-xs text-red-400 mt-4 h-4";
-    return;
-  }
-  if (!checkPhone()) {                                     // ⑩ 正则验证：不符合就拦下
-    msg.textContent = "手机号格式不符合，请检查";
-    msg.className = "text-xs text-red-400 mt-4 h-4";
-    return;
-  }
-  addToRoster(name, major);                                // ⑤ 进表
-  msg.textContent = "";
-  $("su-name").value = "";
-  $("su-major").value = "";
-  $("su-phone").value = "";
-  checkPhone();                                            // 重置手机号提示
-  openModal("报名成功", name + " 已加入 " + major + " 的报名名单！", "🎉");  // ② 弹窗
-});
-
-
-/* ---------- ⑧ 手风琴动画 ----------
-   原理：点标题 → 展开/收起对应内容；其它项收起（一次只开一个）。 */
-document.querySelectorAll(".accordion-item").forEach((item) => {
-  const head = item.querySelector(".accordion-head");
-  const body = item.querySelector(".accordion-body");
-  const sign = head.querySelector("span");
-  head.addEventListener("click", () => {
-    const isOpen = body.style.maxHeight && body.style.maxHeight !== "0px";
-    // 先全部收起
-    document.querySelectorAll(".accordion-body").forEach((b) => (b.style.maxHeight = "0px"));
-    document.querySelectorAll(".accordion-head span").forEach((s) => (s.textContent = "+"));
-    // 再展开当前（若原来是关的）
-    if (!isOpen) {
-      body.style.maxHeight = body.scrollHeight + "px";
-      sign.textContent = "−";
+  /* ---------- 通用：吸顶导航 scroll-spy（高亮当前所在能力节） ---------- */
+  (function () {
+    var links = Array.prototype.slice.call(document.querySelectorAll('#spec-nav .snav'));
+    if (!links.length) return;
+    function setActive(id) {
+      links.forEach(function (a) { a.classList.toggle('active', a.getAttribute('data-sec') === id); });
     }
-  });
-});
+    var secs = ['s1', 's2', 's3', 's4', 's5', 's6']
+      .map(function (id) { return document.getElementById(id); })
+      .filter(Boolean);
+    var spy = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) { if (e.isIntersecting) setActive(e.target.id); });
+    }, { rootMargin: '-45% 0px -50% 0px', threshold: 0 });
+    secs.forEach(function (s) { spy.observe(s); });
+    // 点击后即时高亮（不等滚动观察）
+    links.forEach(function (a) {
+      a.addEventListener('click', function () { setActive(a.getAttribute('data-sec')); });
+    });
+  })();
 
+  /* ---------- 通用：动画增强（进度条 / 导航游标 / 行级联 / 巨号视差） ---------- */
+  (function () {
+    // 顶部阅读进度条
+    var bar = document.createElement('div');
+    bar.id = 'read-bar';
+    document.body.appendChild(bar);
 
-/* ---------- ④ 留言板 ----------
-   原理：留言存 localStorage 的 "messages" 数组，刷新后还在；
-   支持发布与删除。 */
-function getMessages() {
-  return JSON.parse(localStorage.getItem("messages") || "[]");
-}
-function saveMessages(list) {
-  localStorage.setItem("messages", JSON.stringify(list));
-}
-function renderMessages() {
-  const list = getMessages();
-  const ul = $("msg-list");
-  ul.innerHTML = "";
-  if (list.length === 0) {
-    ul.innerHTML = '<li class="text-zinc-600 text-sm">还没有留言，来抢沙发～</li>';
-    return;
+    // 分节导航：滑动游标——跟随当前高亮的能力节平滑移动
+    var navUl = document.querySelector('#spec-nav ul');
+    var ink = null, links = [];
+    if (navUl) {
+      ink = document.createElement('li');
+      ink.id = 'snav-ink';
+      ink.setAttribute('aria-hidden', 'true');
+      navUl.appendChild(ink);
+      links = Array.prototype.slice.call(navUl.querySelectorAll('.snav'));
+    }
+    function moveInk() {
+      if (!ink || !links.length) return;
+      var a = navUl.querySelector('.snav.active') || links[0];
+      if (!a) { ink.style.opacity = '0'; return; }
+      ink.style.opacity = '1';
+      ink.style.width = a.offsetWidth + 'px';
+      ink.style.height = a.offsetHeight + 'px';
+      // 用 offsetLeft/Top（相对定位的 ul），横向滚动时游标随内容一起滚，不会错位
+      ink.style.transform = 'translate(' + a.offsetLeft + 'px,' + a.offsetTop + 'px)';
+    }
+    // scroll-spy 在别处切换 .active —— 用 MutationObserver 跟随，无需轮询
+    if (navUl) {
+      var mo = new MutationObserver(moveInk);
+      links.forEach(function (a) { mo.observe(a, { attributes: true, attributeFilter: ['class'] }); });
+      navUl.addEventListener('click', function () { setTimeout(moveInk, 0); });
+    }
+
+    // 巨号 specnum 视差
+    var specnums = Array.prototype.slice.call(document.querySelectorAll('.specnum'));
+    var ticking = false;
+    function onScroll() {
+      if (ticking) return; ticking = true;
+      requestAnimationFrame(function () {
+        var h = document.documentElement;
+        var st = window.pageYOffset || h.scrollTop || 0;
+        var max = h.scrollHeight - h.clientHeight;
+        bar.style.width = (max > 0 ? (st / max * 100) : 0) + '%';
+        var vh = window.innerHeight;
+        for (var i = 0; i < specnums.length; i++) {
+          var r = specnums[i].getBoundingClientRect();
+          var p = (r.top + r.height / 2 - vh / 2) / vh;   // 距视口中线的归一化位置
+          specnums[i].style.transform = 'translateY(' + (p * -16).toFixed(1) + 'px)';
+        }
+        ticking = false;
+      });
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', function () { moveInk(); onScroll(); });
+    window.addEventListener('load', moveInk);
+    moveInk(); onScroll();
+
+    // 巨号 specnum 进场扫光：能力节进入视口时，描边巨号亮一下青色再落定
+    var spy2 = new IntersectionObserver(function (es) {
+      es.forEach(function (e) {
+        if (e.isIntersecting) {
+          var n = e.target.querySelector('.specnum');
+          if (n) n.classList.add('lit');
+          spy2.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.35 });
+    document.querySelectorAll('section.spec').forEach(function (s) { spy2.observe(s); });
+
+    // 交互光斑：跟随鼠标的柔光，点亮蓝图栅格附近区域（桌面端，细指针才启用）
+    if (window.matchMedia && window.matchMedia('(pointer:fine)').matches) {
+      var spot = document.createElement('div');
+      spot.id = 'cursor-spot';
+      spot.setAttribute('aria-hidden', 'true');
+      document.body.appendChild(spot);
+      var sx = 0, sy = 0, moved = false;
+      window.addEventListener('mousemove', function (ev) {
+        sx = ev.clientX; sy = ev.clientY;
+        if (!moved) { moved = true; spot.style.opacity = '1'; }
+        spot.style.transform = 'translate(' + (sx - 200) + 'px,' + (sy - 200) + 'px)';
+      }, { passive: true });
+      window.addEventListener('mouseleave', function () { spot.style.opacity = '0'; });
+    }
+  })();
+
+  /* ---------- 通用：浮层提示 ---------- */
+  var toastEl = document.getElementById('toast');
+  var toastTimer;
+  function toast(msg) {
+    if (!toastEl) return;
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 1800);
   }
-  list.forEach((m, i) => {
-    const li = document.createElement("li");
-    li.className = "bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 flex justify-between items-start gap-4";
-    li.innerHTML =
-      '<div><p class="text-sm">' + m.text + '</p><p class="text-xs text-zinc-600 mt-1">' + m.time + "</p></div>" +
-      '<button class="text-red-400 hover:text-red-300 text-xs shrink-0" data-i="' + i + '">删除</button>';
-    ul.appendChild(li);
-  });
-  ul.querySelectorAll("button[data-i]").forEach((b) => {
-    b.addEventListener("click", () => {
-      const list = getMessages();
-      list.splice(Number(b.dataset.i), 1);
-      saveMessages(list);
-      renderMessages();
-    });
-  });
-}
-function sendMessage() {
-  const input = $("msg-input");
-  const text = input.value.trim();
-  if (!text) return;
-  const list = getMessages();
-  list.unshift({ text, time: new Date().toLocaleString("zh-CN") });  // 新留言放最前
-  saveMessages(list);
-  input.value = "";
-  renderMessages();
-}
-$("msg-send").addEventListener("click", sendMessage);
-$("msg-input").addEventListener("keydown", (e) => {
-  if (e.key === "Enter") sendMessage();
-});
-renderMessages();
 
+  /* ============================================================
+     01 · HTML 语义结构 —— 语义标签 ↔ 全 div 切换
+     ============================================================ */
+  (function () {
+    var btn = document.getElementById('sem-toggle');
+    var anat = document.getElementById('anat');
+    var outline = document.getElementById('outline');
+    if (!btn || !anat || !outline) return;
 
-/* ---------- ⑨ 电梯导航定位 ----------
-   两件事：
-   1) 点右侧圆点 → 平滑滚到对应区块；
-   2) 滚动时高亮"当前可见"的那个区块对应的圆点（scroll-spy）。 */
-const dots = document.querySelectorAll("#elevator .dot");
+    var tags = { 'header': 't-header', 'nav': 't-nav', 'main': 't-main', 'article': 't-article', 'aside': 't-aside', 'footer': 't-footer' };
+    var semantic = true;
 
-dots.forEach((dot) => {
-  dot.addEventListener("click", () => {
-    document.getElementById(dot.dataset.target).scrollIntoView({ behavior: "smooth" });
-  });
-});
+    var semanticOutline =
+      '<li>页眉 / Banner</li>' +
+      '<li>导航 / Navigation</li>' +
+      '<li>主内容 / Main<ul>' +
+      '<li class="lv2">文章 / Article</li>' +
+      '<li class="lv2">补充 / Complementary</li></ul></li>' +
+      '<li>页脚 / Footer</li>';
 
-// 用 IntersectionObserver 判断哪个区块进入视口，高亮对应圆点
-const spy = new IntersectionObserver(
-  (entries) => {
-    entries.forEach((e) => {
-      if (e.isIntersecting) {
-        dots.forEach((d) =>
-          d.classList.toggle("active", d.dataset.target === e.target.id)
-        );
+    function render() {
+      if (semantic) {
+        anat.classList.remove('soup');
+        Object.keys(tags).forEach(function (t) {
+          var el = document.getElementById(tags[t]);
+          if (el) el.textContent = '<' + t + '>';
+        });
+        outline.classList.remove('dead');
+        outline.innerHTML = semanticOutline;
+        btn.textContent = '切到「全 div」写法';
+      } else {
+        anat.classList.add('soup');
+        Object.keys(tags).forEach(function (t) {
+          var el = document.getElementById(tags[t]);
+          if (el) el.textContent = '<div>';
+        });
+        outline.classList.add('dead');
+        outline.innerHTML =
+          '<li>⚠ 无可识别的页面结构</li>' +
+          '<li style="color:var(--mut)">屏幕阅读器只看到一连串 &lt;div&gt;</li>' +
+          '<li style="color:var(--mut)">没有地标、没有大纲、没法快速跳转</li>' +
+          '<li style="color:var(--mut)">搜索引擎也更难理解内容层次</li>';
+        btn.textContent = '切回「语义标签」写法';
       }
+    }
+    btn.addEventListener('click', function () { semantic = !semantic; render(); });
+    render();
+  })();
+
+  /* ============================================================
+     02 · CSS 高级视觉 —— 实时调玻璃卡片 + 同步代码
+     ============================================================ */
+  (function () {
+    var card = document.getElementById('glass-card');
+    var stage = document.getElementById('glass-stage');
+    var rBlur = document.getElementById('r-blur');
+    var rGlow = document.getElementById('r-glow');
+    var rTilt = document.getElementById('r-tilt');
+    var code = document.getElementById('css-code');
+    if (!card || !rBlur) return;
+
+    var tiltMax = 0;
+    function apply() {
+      var blur = +rBlur.value, glow = +rGlow.value, tilt = +rTilt.value;
+      tiltMax = tilt;
+      card.style.setProperty('--gblur', blur + 'px');
+      card.style.setProperty('--gglow', glow + 'px');
+      card.style.setProperty('--gglowA', (glow / 80 * 0.7 + 0.15).toFixed(2));
+      document.getElementById('v-blur').textContent = blur;
+      document.getElementById('v-glow').textContent = glow;
+      document.getElementById('v-tilt').textContent = tilt;
+      code.innerHTML =
+        '.glass-card {\n' +
+        '  <span class="p">background</span>: <span class="s">rgba(255,255,255,.07)</span>;\n' +
+        '  <span class="p">backdrop-filter</span>: <span class="k">blur(' + blur + 'px)</span>;\n' +
+        '  <span class="p">box-shadow</span>: 0 0 <span class="k">' + glow + 'px</span> rgba(91,140,255,.5);\n' +
+        '  <span class="p">transform</span>: <span class="k">perspective(700px)</span> rotateX/Y(±' + tilt + '°);\n' +
+        '}';
+    }
+    [rBlur, rGlow, rTilt].forEach(function (r) { r.addEventListener('input', apply); });
+    apply();
+
+    // 鼠标移动 → 3D 倾斜（幅度由「倾斜」滑块控制）
+    stage.addEventListener('mousemove', function (e) {
+      if (!tiltMax) { card.style.setProperty('--grx', '0deg'); card.style.setProperty('--gry', '0deg'); return; }
+      var r = stage.getBoundingClientRect();
+      var nx = (e.clientX - r.left) / r.width - 0.5;
+      var ny = (e.clientY - r.top) / r.height - 0.5;
+      card.style.setProperty('--gry', (nx * tiltMax).toFixed(2) + 'deg');
+      card.style.setProperty('--grx', (-ny * tiltMax).toFixed(2) + 'deg');
     });
-  },
-  { threshold: 0.5 }
-);
-["home", "login", "majors", "signup", "roster", "faq", "board"].forEach((id) =>
-  spy.observe(document.getElementById(id))
-);
+    stage.addEventListener('mouseleave', function () {
+      card.style.setProperty('--grx', '0deg'); card.style.setProperty('--gry', '0deg');
+    });
+  })();
+
+  /* ============================================================
+     03 · JS 交互功能 —— 原生 JS 迷你实验室
+        ① 事件 & DOM  ② 表单校验  ③ 定时器 & 动画  ④ 本地存储
+     ============================================================ */
+  (function () {
+    // —— 标签页切换 ——
+    var tabs = Array.prototype.slice.call(document.querySelectorAll('.js-tab'));
+    var panels = Array.prototype.slice.call(document.querySelectorAll('.js-panel'));
+    tabs.forEach(function (t) {
+      t.addEventListener('click', function () {
+        var k = t.getAttribute('data-jp');
+        tabs.forEach(function (x) { var on = x === t; x.classList.toggle('on', on); x.setAttribute('aria-selected', on ? 'true' : 'false'); });
+        panels.forEach(function (p) { p.classList.toggle('hidden', p.getAttribute('data-jp') !== k); });
+      });
+    });
+
+    /* ① 点赞：addEventListener + 动态涟漪节点 + 计数动画 */
+    var likeBtn = document.getElementById('like-btn');
+    var likeCount = document.getElementById('like-count');
+    var likes = 0;
+    if (likeBtn) {
+      likeBtn.addEventListener('click', function (e) {
+        var r = likeBtn.getBoundingClientRect();
+        var rip = document.createElement('span');
+        rip.className = 'ripple';
+        var size = Math.max(r.width, r.height);
+        rip.style.width = rip.style.height = size + 'px';
+        rip.style.left = (e.clientX - r.left - size / 2) + 'px';
+        rip.style.top = (e.clientY - r.top - size / 2) + 'px';
+        likeBtn.appendChild(rip);
+        setTimeout(function () { rip.remove(); }, 600);
+        likes++; likeCount.textContent = likes;
+        likeCount.animate([{ transform: 'scale(1.6)' }, { transform: 'scale(1)' }], { duration: 260, easing: 'cubic-bezier(.16,1,.3,1)' });
+        if (likes === 1) toast('收到你的第 1 个赞 👍');
+        else if (likes % 10 === 0) toast('已经 ' + likes + ' 个赞了，火力全开！🔥');
+      });
+    }
+
+    /* ① 拖拽取值：input 事件实时绑定 */
+    var range = document.getElementById('drag-range');
+    if (range) {
+      var dVal = document.getElementById('drag-val'), dBar = document.getElementById('drag-bar');
+      range.addEventListener('input', function () { dVal.textContent = range.value; dBar.style.width = range.value + '%'; });
+    }
+
+    /* ① 动态建 DOM：createElement / appendChild / remove */
+    var chipBox = document.getElementById('chip-box');
+    var CHIP_WORDS = ['响应式', '无障碍', '微交互', '玻璃拟态', '暗色模式', '栅格', '语义化', '渐变辉光', '骨架屏', '视差'];
+    var chipI = 0;
+    function addChip() {
+      var word = CHIP_WORDS[chipI % CHIP_WORDS.length]; chipI++;
+      var chip = document.createElement('span');
+      chip.className = 'chip';
+      var label = document.createElement('span'); label.textContent = '# ' + word;
+      var x = document.createElement('button'); x.textContent = '✕'; x.setAttribute('aria-label', '删除 ' + word);
+      x.addEventListener('click', function () { chip.remove(); });
+      chip.appendChild(label); chip.appendChild(x);
+      chipBox.appendChild(chip);
+    }
+    var chipAdd = document.getElementById('chip-add');
+    if (chipAdd && chipBox) { chipAdd.addEventListener('click', addChip); addChip(); addChip(); addChip(); }
+    var chipClear = document.getElementById('chip-clear');
+    if (chipClear) chipClear.addEventListener('click', function () { if (chipBox) chipBox.innerHTML = ''; });
+
+    /* ① 即时反馈：toast / 复制 */
+    var toastBtn = document.getElementById('toast-btn');
+    if (toastBtn) toastBtn.addEventListener('click', function () { toast('这就是一条即时反馈提示 ✨'); });
+    var copyBtn = document.getElementById('copy-btn');
+    if (copyBtn) copyBtn.addEventListener('click', function () {
+      var url = location.href.split('#')[0];
+      function done() { toast('链接已复制到剪贴板 📋'); }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(done).catch(function () { fb(url); });
+      } else { fb(url); }
+      function fb(t) { var ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); done(); } catch (e) { toast('复制失败，请手动复制'); } ta.remove(); }
+    });
+
+    /* ② 表单校验：正则 + 密码强度 + 联动启用提交 */
+    var rules = {
+      'f-name':  { test: function (v) { return v.trim().length >= 2; }, ok: '姓名可用', err: '至少 2 个字' },
+      'f-phone': { test: function (v) { return /^1[3-9]\d{9}$/.test(v); }, ok: '手机号格式正确', err: '需 1 开头的 11 位号码' },
+      'f-email': { test: function (v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }, ok: '邮箱格式正确', err: '请输入有效邮箱' }
+    };
+    var fState = {};
+    function msgEl(id) { return document.querySelector('.vmsg[data-for="' + id + '"]'); }
+    function refreshSubmit() {
+      var btn = document.getElementById('f-submit'); if (!btn) return;
+      var pass = Object.keys(rules).every(function (id) { return fState[id]; }) && !!fState['f-pwd'];
+      btn.disabled = !pass;
+    }
+    Object.keys(rules).forEach(function (id) {
+      var el = document.getElementById(id); if (!el) return;
+      el.addEventListener('input', function () {
+        var v = el.value, m = msgEl(id);
+        if (!v) { el.classList.remove('ok', 'err'); if (m) { m.textContent = ''; m.className = 'vmsg'; } fState[id] = false; refreshSubmit(); return; }
+        var ok = rules[id].test(v);
+        el.classList.toggle('ok', ok); el.classList.toggle('err', !ok);
+        if (m) { m.textContent = (ok ? '✓ ' : '✕ ') + (ok ? rules[id].ok : rules[id].err); m.className = 'vmsg ' + (ok ? 'ok' : 'err'); }
+        fState[id] = ok; refreshSubmit();
+      });
+    });
+    var pwd = document.getElementById('f-pwd');
+    if (pwd) {
+      var pbar = document.getElementById('pwd-bar'), pmsg = msgEl('f-pwd');
+      pwd.addEventListener('input', function () {
+        var v = pwd.value, score = 0;
+        if (v.length >= 8) score++;
+        if (/[a-z]/.test(v) && /[A-Z]/.test(v)) score++;
+        if (/\d/.test(v)) score++;
+        if (/[^A-Za-z0-9]/.test(v)) score++;
+        var pct = [0, 30, 55, 80, 100][score];
+        var col = ['', '#fb7185', '#ffb454', '#5b8cff', '#4ade80'][score];
+        var label = ['', '弱', '一般', '较强', '很强'][score];
+        if (pbar) { pbar.style.width = pct + '%'; pbar.style.background = col || 'var(--blue)'; }
+        var ok = score >= 2;
+        pwd.classList.toggle('ok', ok); pwd.classList.toggle('err', v.length > 0 && !ok);
+        if (pmsg) { pmsg.textContent = v ? '强度：' + label : ''; pmsg.className = 'vmsg ' + (ok ? 'ok' : 'err'); }
+        fState['f-pwd'] = ok; refreshSubmit();
+      });
+    }
+    var fSubmit = document.getElementById('f-submit');
+    if (fSubmit) fSubmit.addEventListener('click', function () { if (!fSubmit.disabled) toast('校验全部通过，提交成功 ✅'); });
+
+    /* ③ 倒计时（setInterval）/ 实时时钟 / 打字机 */
+    var disp = document.getElementById('timer-disp'), tBar = document.getElementById('t-bar');
+    if (disp) {
+      var TOTAL = 30, left = TOTAL, handle = null;
+      function fmt(s) { var m = Math.floor(s / 60), x = s % 60; return (m < 10 ? '0' : '') + m + ':' + (x < 10 ? '0' : '') + x; }
+      function paint() { disp.textContent = fmt(left); if (tBar) tBar.style.width = (left / TOTAL * 100) + '%'; }
+      function tick() { if (left <= 0) { clearInterval(handle); handle = null; toast('倒计时结束 ⏰'); return; } left--; paint(); }
+      document.getElementById('t-start').addEventListener('click', function () { if (handle || left <= 0) return; handle = setInterval(tick, 1000); });
+      document.getElementById('t-pause').addEventListener('click', function () { clearInterval(handle); handle = null; });
+      document.getElementById('t-reset').addEventListener('click', function () { clearInterval(handle); handle = null; left = TOTAL; paint(); });
+      paint();
+    }
+    var clock = document.getElementById('clock-disp');
+    if (clock) {
+      function pad(n) { return (n < 10 ? '0' : '') + n; }
+      function tickClock() { var d = new Date(); clock.textContent = pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()); }
+      tickClock(); setInterval(tickClock, 1000);
+    }
+    var tw = document.getElementById('tw');
+    if (tw) {
+      var PHRASES = ['对话即渲染', '一句话生成网页', '原生 JS · 零依赖', 'HTML / CSS / JS'];
+      var ti = 0, ci = 0, del = false;
+      function twTick() {
+        var full = PHRASES[ti];
+        tw.textContent = full.slice(0, ci);
+        if (!del) { ci++; if (ci > full.length) { del = true; setTimeout(twTick, 1100); return; } }
+        else { ci--; if (ci < 0) { del = false; ti = (ti + 1) % PHRASES.length; ci = 0; } }
+        setTimeout(twTick, del ? 45 : 110);
+      }
+      twTick();
+    }
+
+    /* ④ 待办清单（localStorage 持久化：JSON.stringify / parse） */
+    var todoList = document.getElementById('todo-list');
+    if (todoList) {
+      var KEY = 'spec_todos_v1';
+      var input = document.getElementById('todo-input'), stat = document.getElementById('todo-stat');
+      var todos = [];
+      try { todos = JSON.parse(localStorage.getItem(KEY)) || []; } catch (e) { todos = []; }
+      if (!todos.length) todos = [{ t: '试试勾选我（状态会存下来）', d: false }, { t: '刷新页面，这个列表还在', d: false }];
+      function save() { try { localStorage.setItem(KEY, JSON.stringify(todos)); } catch (e) {} }
+      function render() {
+        todoList.innerHTML = '';
+        todos.forEach(function (item, i) {
+          var li = document.createElement('li');
+          li.className = 'todo-item' + (item.d ? ' done' : '');
+          var ck = document.createElement('span'); ck.className = 'todo-check'; ck.setAttribute('role', 'checkbox'); ck.setAttribute('aria-checked', item.d ? 'true' : 'false'); ck.tabIndex = 0; ck.textContent = item.d ? '✓' : '';
+          function toggle() { item.d = !item.d; save(); render(); }
+          ck.addEventListener('click', toggle);
+          ck.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
+          var span = document.createElement('span'); span.className = 'todo-text'; span.textContent = item.t;
+          var del = document.createElement('button'); del.className = 'btn btn-ghost !py-1 !px-2 !text-xs'; del.textContent = '删除'; del.setAttribute('aria-label', '删除：' + item.t);
+          del.addEventListener('click', function () { todos.splice(i, 1); save(); render(); });
+          li.appendChild(ck); li.appendChild(span); li.appendChild(del);
+          todoList.appendChild(li);
+        });
+        var done = todos.filter(function (x) { return x.d; }).length;
+        if (stat) stat.textContent = todos.length + ' 项 · 已完成 ' + done;
+      }
+      function add() { var v = input.value.trim(); if (!v) return; todos.push({ t: v, d: false }); input.value = ''; save(); render(); }
+      document.getElementById('todo-add').addEventListener('click', add);
+      input.addEventListener('keydown', function (e) { if (e.key === 'Enter') add(); });
+      document.getElementById('todo-clear').addEventListener('click', function () { todos = []; save(); render(); });
+      render();
+    }
+  })();
+
+  /* ============================================================
+     04~06 · Vue 3 驱动（路由 / 数据渲染 / 搜索筛选）
+     ============================================================ */
+  if (!window.Vue) { console.warn('Vue 未加载，04~06 演示降级'); return; }
+  var createApp = Vue.createApp, ref = Vue.ref, reactive = Vue.reactive,
+      computed = Vue.computed, onMounted = Vue.onMounted, onUnmounted = Vue.onUnmounted;
+
+  /* 共享数据集（取站点里确有配图的专业，搜索/渲染都用它） */
+  var MAJORS = [
+    { name: '计算机类',   cat: '工学', color: '#5b8cff' },
+    { name: '电子信息类', cat: '工学', color: '#38bdf8' },
+    { name: '机械类',     cat: '工学', color: '#f59e0b' },
+    { name: '自动化类',   cat: '工学', color: '#22d3ee' },
+    { name: '数学类',     cat: '理学', color: '#34e3d4' },
+    { name: '物理学类',   cat: '理学', color: '#818cf8' },
+    { name: '化学类',     cat: '理学', color: '#2dd4bf' },
+    { name: '金融学类',   cat: '经管', color: '#fbbf24' },
+    { name: '经济学类',   cat: '经管', color: '#f472b6' },
+    { name: '工商管理类', cat: '经管', color: '#fb923c' },
+    { name: '法学类',     cat: '人文', color: '#a78bfa' },
+    { name: '哲学类',     cat: '人文', color: '#94a3b8' },
+    { name: '新闻传播学类', cat: '人文', color: '#60a5fa' },
+    { name: '临床医学类', cat: '医学', color: '#fb7185' },
+    { name: '护理学类',   cat: '医学', color: '#f87171' },
+    { name: '设计学类',   cat: '艺术', color: '#f0abfc' },
+    { name: '美术学类',   cat: '艺术', color: '#c084fc' },
+    { name: '音乐与舞蹈学类', cat: '艺术', color: '#e879f9' }
+  ];
+
+  /* ---------- 04 Vue 路由（hash 路由，前进/后退可用） ---------- */
+  (function () {
+    var el = document.getElementById('vue-router');
+    if (!el) return;
+    var VIEWS = {
+      '/home':    { comp: 'HomeView',   title: '首页 · 概览', body: '这是 SPA 的首页视图。注意切换标签时整页没有重新加载——只有这块内容在变，地址栏的 hash 同步更新。' },
+      '/courses': { comp: 'CourseView', title: '课程 · 列表', body: '路由把不同 URL 映射到不同组件。/courses 渲染课程视图，常配合数据渲染（见 05）一起用。' },
+      '/about':   { comp: 'AboutView',  title: '关于 · 说明', body: '前进 / 后退按钮也能用：因为路由把状态写进了浏览器历史。刷新当前页会停在同一个视图。' }
+    };
+    createApp({
+      setup: function () {
+        var routes = [
+          { path: '/home', label: '首页' },
+          { path: '/courses', label: '课程' },
+          { path: '/about', label: '关于' }
+        ];
+        function parse() {
+          var h = location.hash.replace(/^#/, '');
+          return VIEWS[h] ? h : '/home';
+        }
+        var current = ref(parse());
+        var alive = ref(0);
+        var timer;
+        function onHash() { current.value = parse(); }
+        onMounted(function () {
+          window.addEventListener('hashchange', onHash);
+          timer = setInterval(function () { alive.value++; }, 1000);
+        });
+        onUnmounted(function () {
+          window.removeEventListener('hashchange', onHash);
+          clearInterval(timer);
+        });
+        return {
+          routes: routes,
+          current: current,
+          alive: alive,
+          view: computed(function () { return VIEWS[current.value]; }),
+          url: computed(function () { return location.origin + location.pathname + '#' + current.value; })
+        };
+      }
+    }).mount(el);
+  })();
+
+  /* ---------- 05 数据渲染（响应式 v-for，增删即时） ---------- */
+  (function () {
+    var el = document.getElementById('vue-data');
+    if (!el) return;
+    createApp({
+      setup: function () {
+        var seed = MAJORS.slice(0, 4).map(function (m, i) { return { id: i + 1, name: m.name, cat: m.cat, color: m.color }; });
+        var list = reactive(seed);
+        var uid = ref(seed.length + 1);
+        var pool = MAJORS.slice(4);
+        var pi = 0;
+        function add() {
+          var m = pool[pi % pool.length]; pi++;
+          list.push({ id: uid.value++, name: m.name, cat: m.cat, color: m.color });
+        }
+        function remove(i) { list.splice(i, 1); }
+        return { list: list, add: add, remove: remove };
+      }
+    }).mount(el);
+  })();
+
+  /* ---------- 06 搜索筛选（computed 实时过滤） ---------- */
+  (function () {
+    var el = document.getElementById('vue-filter');
+    if (!el) return;
+    createApp({
+      setup: function () {
+        var all = MAJORS;
+        var cats = ['全部', '工学', '理学', '经管', '人文', '医学', '艺术'];
+        var q = ref('');
+        var cat = ref('全部');
+        var filtered = computed(function () {
+          var kw = q.value.trim();
+          return all.filter(function (m) {
+            var okCat = cat.value === '全部' || m.cat === cat.value;
+            var okKw = !kw || m.name.indexOf(kw) !== -1 || m.cat.indexOf(kw) !== -1;
+            return okCat && okKw;
+          });
+        });
+        return { all: all, cats: cats, q: q, cat: cat, filtered: filtered };
+      }
+    }).mount(el);
+  })();
+
+})();

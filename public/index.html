@@ -3,47 +3,210 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>对话即渲染 · AI 网页生成器</title>
+  <title>对话即渲染 · AI Studio</title>
+  <meta name="description" content="用一句话生成一个完整、带交互的网页：DeepSeek 实时生成单文件 HTML，沙盒里即刻预览。" />
   <link rel="preconnect" href="https://fonts.loli.net" />
   <link rel="preconnect" href="https://gstatic.loli.net" crossorigin />
-  <link href="https://fonts.loli.net/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.loli.net/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&family=Playfair+Display:wght@500;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- GSAP 动画引擎：用本站 vendor 的本地副本（不走 jsdelivr —— 国内常被墙导致动效全挂）-->
+  <script src="/gsap.min.js"></script>
   <style>
     :root {
-      --color-primary: #6366f1;
-      --color-error: #f87171;
-      --color-success: #4ade80;
+      /* ── 语义色彩 Token（与首页统一）──────────── */
+      --color-primary:        #6366f1;
+      --color-primary-hover:  #818cf8;
+      --color-primary-dim:    #4338ca;
+      --color-surface:        #0c0c12;
+      --color-surface-elevated:#13131c;
+      --color-bg:             #09090b;
+      --color-text:           #fafafa;
+      --color-text-dim:       #a1a1aa;
+      --color-text-muted:     #71717a;
+      --color-border:         rgba(255,255,255,.08);
+      --color-border-hover:   rgba(255,255,255,.18);
+      --color-error:          #f87171;
+      --color-success:        #4ade80;
     }
+    html { touch-action: manipulation; }
     body { font-family: 'Inter','Noto Sans SC','PingFang SC','HarmonyOS Sans SC','Microsoft YaHei',system-ui,sans-serif; }
-    body::before { content:''; position:fixed; inset:0; z-index:-1; pointer-events:none; background:radial-gradient(50% 34% at 50% 0%, rgba(99,102,241,.12), transparent 70%); }
-    .glow-btn { transition: all .4s cubic-bezier(.4,0,.2,1); }
+
+    /* 自定义滚动条 —— 细、暗、无箭头，融入深色主题（默认那条带箭头的白滑道太丑）*/
+    ::-webkit-scrollbar { width: 9px; height: 9px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius: 99px;
+      border: 2px solid transparent; background-clip: padding-box; transition: background .2s; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(129,140,248,.6); background-clip: padding-box; }
+    ::-webkit-scrollbar-corner { background: transparent; }
+    * { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.16) transparent; }
+
+    /* 标题用衬线，眉标/标签用等宽 —— 与首页同一套字体性格 */
+    .page-title, h1, h2 { font-family: 'Playfair Display','Noto Serif SC','Georgia','Songti SC',serif; }
+    .eyebrow, .mono { font-family: 'JetBrains Mono','SF Mono','Fira Code',monospace; }
+    .eyebrow { font-size:.66rem; letter-spacing:.24em; text-transform:uppercase; color:var(--color-text-muted); }
+
+    /* 背景氛围光（顶部主色辉光 + 角落柔光）*/
+    body::before { content:''; position:fixed; inset:0; z-index:-1; pointer-events:none;
+      background:
+        radial-gradient(46% 30% at 50% -4%, rgba(99,102,241,.16), transparent 70%),
+        radial-gradient(38% 36% at 100% 100%, rgba(67,56,202,.10), transparent 72%); }
+
+    /* ── 焦点环 / 跳过链接（无障碍）──────────── */
     :focus-visible { outline: 2.5px solid var(--color-primary); outline-offset: 3px; border-radius: 4px; }
-    .skip-link { position: absolute; top: -100px; left: 16px; background: var(--color-primary); color: #fff; padding: .5rem 1rem; border-radius: 0 0 8px 8px; z-index: 9999; font-size: .85rem; font-weight: 600; transition: top .2s ease; text-decoration: none; }
+    .skip-link { position: absolute; top: -100px; left: 16px; background: var(--color-primary); color: #fff;
+      padding: .5rem 1rem; border-radius: 0 0 8px 8px; z-index: 9999; font-size: .85rem; font-weight: 600;
+      transition: top .2s ease; text-decoration: none; }
     .skip-link:focus { top: 0; }
-    /* ── 骨架屏（L8）────────────────────── */
-    @keyframes shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
-    .skeleton { background: linear-gradient(90deg, #1a1a2e 25%, #252540 50%, #1a1a2e 75%); background-size: 800px 100%; animation: shimmer 1.6s ease-in-out infinite; border-radius: 8px; }
+
+    /* ── 面板与卡片 ──────────────────────────── */
+    .panel { background: linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,0)); }
+    .field {
+      background: rgba(255,255,255,.02); border: 1px solid var(--color-border);
+      transition: border-color .25s ease, box-shadow .25s ease, background .25s ease;
+    }
+    .field:focus-within { border-color: rgba(99,102,241,.7); box-shadow: 0 0 0 4px rgba(99,102,241,.12);
+      background: rgba(99,102,241,.03); }
+
+    /* 示例 chip */
+    .chip { display:inline-flex; align-items:center; gap:.4rem; padding:.4rem .7rem; border-radius:9999px;
+      font-size:.74rem; line-height:1; color:var(--color-text-dim);
+      border:1px solid var(--color-border); background:rgba(255,255,255,.02);
+      transition: color .2s ease, border-color .2s ease, transform .2s ease, background .2s ease; cursor:pointer; }
+    .chip:hover { color:#fff; border-color:rgba(99,102,241,.55); background:rgba(99,102,241,.10); transform:translateY(-1px); }
+
+    /* ── 生成选项（结构/话题/配色/风格 + 多页）── */
+    .opt { display:flex; flex-direction:column; gap:.4rem; }
+    .opt-lab { font-size:.66rem; letter-spacing:.04em; color:var(--color-text-muted); font-family:'JetBrains Mono','SF Mono',monospace; }
+    .opt-sel { width:100%; appearance:none; -webkit-appearance:none; background:rgba(255,255,255,.02); color:var(--color-text);
+      border:1px solid var(--color-border); border-radius:.6rem; padding:.5rem 1.8rem .5rem .6rem; font-size:.8rem; cursor:pointer;
+      transition:border-color .2s ease, box-shadow .2s ease;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat:no-repeat; background-position:right .55rem center; }
+    .opt-sel:focus { outline:none; border-color:rgba(99,102,241,.7); box-shadow:0 0 0 4px rgba(99,102,241,.12); }
+    .opt-sel option { background:#13131c; color:#fafafa; }
+    .mp-box { background:rgba(255,255,255,.015); }
+    .mp-check { width:18px; height:18px; accent-color:var(--color-primary); cursor:pointer; }
+    .mp-page-chip { font-size:.72rem; padding:.32rem .6rem; border-radius:9999px; border:1px solid var(--color-border);
+      color:var(--color-text-dim); background:rgba(255,255,255,.02); cursor:pointer; transition:color .2s,border-color .2s,background .2s; }
+    .mp-page-chip:hover { border-color:rgba(99,102,241,.4); color:#fff; }
+    .mp-page-chip.on { color:#fff; border-color:rgba(99,102,241,.6); background:rgba(99,102,241,.16); }
+    .mp-page-chip:disabled { opacity:.65; cursor:not-allowed; }
+
+    /* 02 页面板块 chip（勾选 / 自定义）*/
+    .block-chip { font-size:.74rem; padding:.34rem .62rem; border-radius:9999px; border:1px solid var(--color-border);
+      color:var(--color-text-dim); background:rgba(255,255,255,.02); cursor:pointer;
+      transition:color .2s,border-color .2s,background .2s; }
+    .block-chip:hover { border-color:rgba(99,102,241,.4); color:#fff; }
+    .block-chip.on { color:#fff; border-color:rgba(99,102,241,.6); background:rgba(99,102,241,.16); }
+    .block-chip .bx { margin-left:.35rem; color:var(--color-text-muted); font-size:.85em; }
+    .block-chip .bx:hover { color:var(--color-error); }
+
+    /* 主按钮：渐变 + 悬浮辉光 */
+    .glow-btn { position:relative; background: linear-gradient(135deg, #6366f1, #4f46e5);
+      transition: transform .35s cubic-bezier(.16,1,.3,1), box-shadow .35s ease, filter .25s ease; }
+    .glow-btn:hover:not(:disabled) { transform: translateY(-2px); filter:brightness(1.06);
+      box-shadow: 0 14px 38px -10px rgba(99,102,241,.7); }
+    .glow-btn:active:not(:disabled) { transform: translateY(0); }
+
+    /* 骨架屏 */
+    @keyframes shimmer { 0% { background-position: -420px 0; } 100% { background-position: 420px 0; } }
+    .skeleton { background: linear-gradient(90deg, #14141f 25%, #20203a 50%, #14141f 75%);
+      background-size: 840px 100%; animation: shimmer 1.5s ease-in-out infinite; border-radius: 8px; }
     .skeleton-bar { height: 16px; margin-bottom: 12px; width: 100%; }
     .skeleton-bar.short { width: 60%; }
-    .skeleton-block { height: 200px; width: 100%; }
-    .glow-btn:hover:not(:disabled) { box-shadow: 0 0 30px rgba(99,102,241,.6); transform: translateY(-2px); }
+    .skeleton-block { height: 220px; width: 100%; }
+
     .spin { animation: spin 1s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* 空状态：柔和呼吸 —— 去掉上下跳动，只做轻微缩放 + 辉光，避免「一直跳」*/
+    @keyframes orb-breath { 0%,100% { transform: scale(1); opacity:.92; box-shadow:0 0 0 0 rgba(99,102,241,0); }
+      50% { transform: scale(1.045); opacity:1; box-shadow:0 0 40px 6px rgba(99,102,241,.12); } }
+    .empty-orb { animation: orb-breath 5s ease-in-out infinite; will-change: transform; }
+
     /* 登录弹窗 */
-    .modal-overlay { background: rgba(0,0,0,.7); backdrop-filter: blur(4px); }
+    .modal-overlay { background: rgba(0,0,0,.7); backdrop-filter: blur(6px); }
+
+    /* ── 可拖拽伸缩：左栏宽度 + 历史区高度 ── */
+    #left-panel { width: 100%; }
+    @media (min-width:768px){ #left-panel { width: var(--left-w, 400px); } }
+    #controls { flex: 1 1 auto; min-height: 0; }
+    #history-pane { flex: 0 0 var(--hist-h, 240px); min-height: 0; }
+    /* 上下手柄：拉高/拉低生成历史 */
+    .v-splitter { flex: 0 0 auto; height: 12px; cursor: row-resize; display:flex; align-items:center; justify-content:center; }
+    .v-splitter::before { content:''; width: 40px; height: 3px; border-radius: 99px; background: rgba(255,255,255,.16); transition: background .2s, width .2s; }
+    .v-splitter:hover::before, .v-splitter.dragging::before, .v-splitter:focus-visible::before { background: var(--color-primary); width: 60px; }
+    .v-splitter:focus-visible { outline: none; }
+    /* 左右手柄：拉宽左栏（贴在右边框上）*/
+    .h-splitter { display:none; position:absolute; top:0; right:-4px; width: 9px; height:100%; cursor: col-resize; z-index: 30; }
+    @media (min-width:768px){ .h-splitter { display:block; } }
+    .h-splitter::after { content:''; position:absolute; top:0; left:4px; width: 2px; height:100%; background: transparent; transition: background .2s; }
+    .h-splitter:hover::after, .h-splitter.dragging::after, .h-splitter:focus-visible::after { background: var(--color-primary); }
+    .h-splitter:focus-visible { outline: none; }
+    body.resizing-x { cursor: col-resize !important; user-select: none; }
+    body.resizing-y { cursor: row-resize !important; user-select: none; }
+    /* 拖拽时让 iframe 不吃鼠标，否则移到预览区会丢 mousemove */
+    body.resizing-x #preview, body.resizing-y #preview { pointer-events: none; }
+
+    /* 预览区：空 / 加载态用深色，避免刺眼白底 */
+    #preview-pane { background: radial-gradient(60% 50% at 50% 0%, rgba(99,102,241,.07), transparent 70%), #0b0b11; }
+    #preview { background: transparent; }
+
+    /* 生成选项折叠箭头 */
+    #opt-caret { transition: transform .25s ease; }
+
+    /* 入场动画初始态（GSAP 接管；JS 失效时回退为可见） */
+    .reveal { opacity: 0; will-change: transform, opacity; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration:.01ms !important; transition-duration:.01ms !important; }
+      .reveal { opacity: 1 !important; }
+    }
+
+    /* ── 结构选择（Inspect）开关 + 信息面板 ── */
+    .ins-toggle { position:absolute; top:12px; right:12px; z-index:20; display:inline-flex; align-items:center; gap:.4rem;
+      padding:.42rem .72rem; border-radius:10px; font-size:.78rem; color:var(--color-text-dim);
+      background:rgba(12,12,18,.72); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
+      border:1px solid rgba(255,255,255,.1); transition:color .2s,background .2s,border-color .2s,box-shadow .2s; }
+    .ins-toggle:hover { color:#fff; border-color:rgba(99,102,241,.6); }
+    .ins-toggle.on { color:#fff; background:rgba(99,102,241,.24); border-color:rgba(99,102,241,.85);
+      box-shadow:0 0 0 3px rgba(99,102,241,.16); }
+    .ins-panel { position:absolute; left:12px; bottom:12px; z-index:20; width:268px; max-width:calc(100% - 24px);
+      background:rgba(13,13,20,.92); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+      border:1px solid rgba(255,255,255,.12); border-radius:14px; padding:.85rem .95rem;
+      box-shadow:0 18px 50px -16px rgba(0,0,0,.85); animation:insIn .25s cubic-bezier(.16,1,.3,1); }
+    @keyframes insIn { from { opacity:0; transform:translateY(10px) scale(.98); } to { opacity:1; transform:none; } }
+    .ins-mini { width:24px; height:24px; display:grid; place-items:center; border-radius:7px; font-size:13px;
+      color:var(--color-text-muted); border:1px solid transparent; transition:color .15s,background .15s; }
+    .ins-mini:hover:not(:disabled) { color:#fff; background:rgba(255,255,255,.08); }
+    .ins-mini:disabled { opacity:.32; cursor:not-allowed; }
+    .ins-chip { font-size:.68rem; padding:.2rem .52rem; border-radius:9999px; border:1px solid rgba(255,255,255,.1);
+      color:var(--color-text-dim); background:rgba(255,255,255,.03); transition:color .15s,border-color .15s,background .15s; cursor:pointer; }
+    .ins-chip:hover { color:#fff; border-color:rgba(99,102,241,.55); background:rgba(99,102,241,.12); }
+    .ins-op { flex:1; height:28px; display:grid; place-items:center; border-radius:8px; font-size:13px;
+      color:var(--color-text-dim); border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.03);
+      transition:color .15s,border-color .15s,background .15s; }
+    .ins-op:hover { color:#fff; border-color:rgba(99,102,241,.55); background:rgba(99,102,241,.12); }
+    .ins-op-danger:hover { color:#fff; border-color:rgba(248,113,113,.6); background:rgba(248,113,113,.14); }
+    .ins-crumb { color:var(--color-text-muted); background:none; border:0; padding:0; font:inherit; cursor:pointer; }
+    .ins-crumb:hover { color:#818cf8; text-decoration:underline; }
+    .ins-sep { color:#3f3f46; }
   </style>
 </head>
-<body class="bg-zinc-950 text-zinc-50 font-sans antialiased h-screen flex flex-col">
+<body class="bg-zinc-950 text-zinc-50 font-sans antialiased h-screen flex flex-col selection:bg-indigo-500/30">
   <a href="#main-content" class="skip-link">跳到主要内容</a>
 
-  <header class="px-6 py-3 border-b border-zinc-900 flex items-center justify-between shrink-0">
-    <div>
-      <h1 class="text-lg font-bold tracking-normal">对话即渲染 <span class="text-indigo-400">Studio</span></h1>
-      <p class="text-xs text-zinc-500">输入需求 → DeepSeek 生成 → 沙盒实时预览</p>
+  <header id="app-header" class="px-6 py-3 border-b border-white/[.06] bg-zinc-950/70 backdrop-blur flex items-center justify-between shrink-0">
+    <div class="flex items-center gap-3">
+      <span class="grid place-items-center w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-700 shadow-lg shadow-indigo-500/30 text-base">⚡</span>
+      <div>
+        <h1 class="text-lg font-bold tracking-tight leading-none">对话即渲染 <span class="text-indigo-400">Studio</span></h1>
+        <p class="eyebrow mt-1.5">Prompt → DeepSeek → 沙盒预览</p>
+      </div>
     </div>
     <div class="flex items-center gap-3">
       <a href="/" class="text-xs text-zinc-400 hover:text-white transition">← 校园专业总览</a>
-      <span id="status" class="text-xs px-3 py-1 rounded-full bg-zinc-900 text-zinc-400">检测中…</span>
+      <span id="status" class="mono text-[11px] px-3 py-1 rounded-full bg-white/[.04] text-zinc-400 border border-white/[.06]">检测中…</span>
       <button id="btn-login-ui" class="text-xs px-3 py-1.5 rounded-full border border-zinc-700 hover:border-zinc-500 transition">登录</button>
       <span id="user-label" class="hidden text-xs text-emerald-400"></span>
       <button id="btn-logout-ui" class="hidden text-xs px-3 py-1.5 rounded-full border border-zinc-700 hover:border-red-500 transition">退出</button>
@@ -51,52 +214,126 @@
   </header>
 
   <main id="main-content" class="flex-1 flex flex-col md:flex-row min-h-0">
-    <!-- 左：对话输入 + 历史记录 -->
-    <section class="md:w-[400px] shrink-0 border-r border-zinc-900 flex flex-col min-h-0">
-      <div class="p-5 flex flex-col gap-4 shrink-0">
-        <label class="text-xs uppercase tracking-widest text-zinc-500">描述你想要的网页</label>
-        <textarea id="prompt" rows="4"
-          class="w-full bg-zinc-900 border border-zinc-800 rounded-2xl p-4 text-sm resize-none focus:outline-none focus:border-indigo-500 transition"
-          placeholder="例如：生成一个摄影师个人作品集网页，极简黑白风格，含作品网格和联系方式"></textarea>
+    <!-- 左：对话输入 + 历史记录（可拖拽伸缩）-->
+    <section id="left-panel" class="shrink-0 border-r border-white/[.06] panel flex flex-col min-h-0 relative">
+      <div id="controls" class="overflow-y-auto p-6 flex flex-col gap-5">
+        <div class="reveal" data-intro>
+          <p class="eyebrow mb-2">01 · 描述需求</p>
+          <label for="prompt" class="block text-sm font-medium text-zinc-200">描述你想要的网页</label>
+        </div>
+
+        <div class="field rounded-2xl reveal" data-intro>
+          <textarea id="prompt" rows="4"
+            class="w-full bg-transparent rounded-2xl p-4 text-sm resize-none focus:outline-none placeholder:text-zinc-600"
+            placeholder="例如：生成一个摄影师个人作品集网页，极简黑白风格，含作品网格和联系方式"></textarea>
+        </div>
+
+        <!-- 一键优化：把上面的描述 + 已选题材/配色/风格 + 板块/结构，整合成标准话术 -->
+        <div class="reveal flex items-center justify-between -mt-2" data-intro>
+          <span class="text-zinc-600 text-[11px] mono">随手写几个词，点优化即可补全为专业提示词</span>
+          <button id="optimize" type="button"
+            class="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-indigo-500/30 text-indigo-300 hover:text-white hover:border-indigo-400/70 hover:bg-indigo-500/10 transition shrink-0">
+            <span>✨</span><span>一键优化提示词</span>
+          </button>
+        </div>
+
+        <!-- 快捷标签：点一下把题材 / 配色 / 风格加进上面的描述 -->
+        <div class="reveal flex flex-col gap-2.5" data-intro>
+          <p class="eyebrow">点一下加进描述 · 题材 / 配色 / 风格</p>
+          <div id="quick-tags" class="flex flex-col gap-2"></div>
+        </div>
+
+        <!-- 02 · 页面板块：勾选 / 自定义网页里要的结构部分（给小白拼页面用，可折叠）-->
+        <div class="reveal flex flex-col gap-3" data-intro>
+          <button id="opt-toggle" type="button" aria-expanded="true" aria-controls="opt-body" class="flex items-center justify-between w-full group">
+            <span class="eyebrow group-hover:text-zinc-300 transition">02 · 页面板块</span>
+            <svg id="opt-caret" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" class="text-zinc-500"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div id="opt-body" class="flex flex-col gap-3">
+            <label class="mp-box flex items-center gap-2.5 cursor-pointer text-sm rounded-xl border border-white/[.06] p-3">
+              <input type="checkbox" id="opt-multipage" class="mp-check" checked>
+              <span class="text-zinc-200 font-medium">生成多页网站</span>
+              <span class="text-zinc-600 text-xs">默认开 · 含导航 + 多页</span>
+            </label>
+
+            <p class="text-zinc-500 text-xs leading-relaxed">勾选要生成的板块（再点取消），或在下方自己加一个：</p>
+            <div id="blocks" class="flex flex-wrap gap-1.5">
+              <button type="button" class="block-chip on" data-block="顶部导航栏" aria-pressed="true">顶部导航</button>
+              <button type="button" class="block-chip on" data-block="英雄区 Hero" aria-pressed="true">英雄区</button>
+              <button type="button" class="block-chip" data-block="关于介绍" aria-pressed="false">关于介绍</button>
+              <button type="button" class="block-chip on" data-block="特性 / 服务" aria-pressed="true">特性/服务</button>
+              <button type="button" class="block-chip" data-block="作品 / 案例展示" aria-pressed="false">作品/案例</button>
+              <button type="button" class="block-chip" data-block="价格方案" aria-pressed="false">价格方案</button>
+              <button type="button" class="block-chip" data-block="用户评价" aria-pressed="false">用户评价</button>
+              <button type="button" class="block-chip" data-block="团队成员" aria-pressed="false">团队成员</button>
+              <button type="button" class="block-chip" data-block="常见问答 FAQ" aria-pressed="false">常见问答</button>
+              <button type="button" class="block-chip" data-block="数据统计" aria-pressed="false">数据统计</button>
+              <button type="button" class="block-chip on" data-block="联系表单" aria-pressed="true">联系表单</button>
+              <button type="button" class="block-chip on" data-block="页脚" aria-pressed="true">页脚</button>
+            </div>
+
+            <div class="flex gap-2">
+              <input id="block-input" maxlength="30"
+                class="field flex-1 rounded-lg px-3 py-2 text-sm focus:outline-none placeholder:text-zinc-600"
+                placeholder="自己加一个板块，如「校园社团介绍」">
+              <button id="block-add" type="button" class="shrink-0 px-3 rounded-lg border border-white/[.08] text-zinc-300 hover:text-white hover:border-indigo-500/60 text-sm transition">＋ 添加</button>
+            </div>
+          </div>
+        </div>
 
         <button id="generate"
-          class="glow-btn bg-indigo-500 hover:bg-indigo-400 text-white font-bold rounded-2xl py-3 text-sm uppercase tracking-widest disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+          class="glow-btn reveal text-white font-bold rounded-2xl py-3.5 text-sm uppercase tracking-[.18em] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2" data-intro>
           <span id="btn-label">生成网页</span>
           <svg id="btn-spin" class="spin hidden" width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-dasharray="40 60"/></svg>
         </button>
 
-        <div class="text-xs text-zinc-600 leading-relaxed">
-          <p class="mb-2 text-zinc-500">试试这些：</p>
-          <div id="examples" class="flex flex-col gap-2"></div>
+        <div class="reveal" data-intro>
+          <p class="eyebrow mb-2.5">试试这些</p>
+          <div id="examples" class="flex flex-wrap gap-2"></div>
         </div>
 
-        <div class="flex items-center gap-3 text-xs">
-          <button id="view-code" class="text-zinc-500 hover:text-zinc-300 transition">查看源码</button>
-          <button id="download" class="text-zinc-500 hover:text-zinc-300 transition">下载 HTML</button>
+        <div class="flex items-center gap-2 text-xs reveal" data-intro>
+          <button id="view-code" class="px-3 py-1.5 rounded-lg border border-white/[.06] text-zinc-400 hover:text-zinc-100 hover:border-white/20 transition">查看源码</button>
+          <button id="download" class="px-3 py-1.5 rounded-lg border border-white/[.06] text-zinc-400 hover:text-zinc-100 hover:border-white/20 transition">下载 HTML</button>
         </div>
       </div>
 
+      <!-- 拖拽手柄：上下拖动调整生成历史高度（也可聚焦后用 ↑↓）-->
+      <div id="v-splitter" class="v-splitter" role="separator" aria-orientation="horizontal" aria-label="拖拽调整生成历史高度" tabindex="0" title="上下拖拽：调整生成历史高度"></div>
+
       <!-- 生成历史 -->
-      <div class="border-t border-zinc-900 flex-1 flex flex-col min-h-0">
-        <div class="px-5 py-3 flex items-center justify-between">
-          <span class="text-xs text-zinc-500 uppercase tracking-widest">生成历史</span>
-          <button id="btn-refresh-history" class="text-xs text-zinc-600 hover:text-zinc-400 transition">刷新</button>
+      <div id="history-pane" class="border-t border-white/[.06] flex flex-col min-h-0 reveal" data-intro>
+        <div class="px-6 py-3 flex items-center justify-between">
+          <span class="eyebrow">生成历史</span>
+          <button id="btn-refresh-history" class="text-xs text-zinc-500 hover:text-indigo-400 transition">刷新</button>
         </div>
         <div id="history-list" class="flex-1 overflow-y-auto px-3 pb-3 space-y-1 text-xs">
           <p class="text-zinc-700 text-center py-6">点击刷新加载…</p>
         </div>
       </div>
+
+      <!-- 拖拽手柄：左右拖动调整左栏宽度（也可聚焦后用 ←→）-->
+      <div id="h-splitter" class="h-splitter" role="separator" aria-orientation="vertical" aria-label="拖拽调整左栏宽度" tabindex="0" title="左右拖拽：调整左栏宽度"></div>
     </section>
 
     <!-- 右：沙盒预览 -->
-    <section class="flex-1 relative bg-zinc-900/30 min-h-0">
+    <section id="preview-pane" class="flex-1 relative min-h-0 reveal" data-intro-preview>
       <iframe id="preview" sandbox="allow-scripts"
-        class="w-full h-full bg-white"
+        class="w-full h-full"
         title="预览"></iframe>
 
-      <div id="placeholder" class="absolute inset-0 flex items-center justify-center text-zinc-600 text-sm pointer-events-none">
-        生成结果会在这里实时渲染
+      <div id="placeholder" class="absolute inset-0 flex flex-col items-center justify-center gap-5 text-center px-8 pointer-events-none">
+        <div class="empty-orb grid place-items-center w-20 h-20 rounded-3xl bg-indigo-500/10 border border-indigo-500/20">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="text-indigo-300">
+            <rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 9h18M7 14h6"/><path d="M8 21h8"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-zinc-300 text-base font-medium">生成结果会在这里实时渲染</p>
+          <p class="text-zinc-600 text-xs mt-2 mono">在左侧描述需求 · 按 ⌘/Ctrl + Enter 快速生成</p>
+        </div>
       </div>
+
       <div id="skeleton" class="hidden absolute inset-0 p-10 flex flex-col gap-4 pointer-events-none">
         <div class="skeleton skeleton-bar w-3/4"></div>
         <div class="skeleton skeleton-bar w-1/2"></div>
@@ -106,25 +343,106 @@
         <div class="skeleton skeleton-bar w-5/6"></div>
         <div class="skeleton skeleton-bar short w-1/3"></div>
       </div>
-      <pre id="code" class="hidden absolute inset-0 overflow-auto bg-zinc-950 text-zinc-300 text-xs p-5 leading-relaxed"></pre>
+      <pre id="code" class="hidden absolute inset-0 overflow-auto bg-zinc-950 text-zinc-300 text-xs p-5 leading-relaxed mono"></pre>
+
+      <!-- 结构选择（Inspect 模式）开关 + 选中信息面板 -->
+      <button id="btn-inspect" type="button" aria-pressed="false" class="ins-toggle" title="开启后，把鼠标移到预览里的结构上即可高亮、点击选中">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h7v7H3z"/><path d="M14 3h7v7h-7z" opacity=".5"/><path d="M14 14h7v7h-7z"/><path d="M3 14h7v7H3z" opacity=".5"/></svg>
+        <span class="lbl">选择结构</span>
+      </button>
+
+      <div id="inspect-panel" class="ins-panel hidden">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[11px] mono text-indigo-300 tracking-wider">已选中结构</span>
+          <div class="flex items-center gap-1">
+            <button id="ins-undo" type="button" title="撤销 (Ctrl+Z)" class="ins-mini" disabled>↶</button>
+            <button id="ins-redo" type="button" title="重做 (Ctrl+Shift+Z)" class="ins-mini" disabled>↷</button>
+            <button id="ins-close" type="button" title="关闭" class="ins-mini">✕</button>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+          <span id="ins-name" class="text-sm font-semibold text-white">—</span>
+          <span id="ins-tag" class="mono text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-zinc-300"></span>
+        </div>
+        <p id="ins-path" class="mono text-[11px] text-zinc-500 mb-2 break-words leading-relaxed"></p>
+        <p id="ins-text" class="text-xs text-zinc-400 mb-2.5 leading-relaxed" style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden"></p>
+
+        <!-- 局部自然语言编辑 -->
+        <div id="ins-edit-wrap">
+          <div class="flex gap-1 mb-2">
+            <button type="button" id="ins-up" class="ins-op" title="上移">↑</button>
+            <button type="button" id="ins-down" class="ins-op" title="下移">↓</button>
+            <button type="button" id="ins-dup" class="ins-op" title="复制一份">⧉</button>
+            <button type="button" id="ins-del" class="ins-op ins-op-danger" title="删除">🗑</button>
+          </div>
+          <textarea id="ins-edit-input" rows="2" class="w-full bg-black/40 border border-white/10 rounded-lg p-2 text-xs text-zinc-100 resize-none focus:outline-none focus:border-indigo-500/70 placeholder:text-zinc-600" placeholder="想怎么改？如：把标题改得更有科技感（Ctrl+Enter 应用）"></textarea>
+          <div class="flex flex-wrap gap-1 my-2">
+            <button type="button" class="ins-chip" data-q="把这里的文案改得更专业、更有力">改文案</button>
+            <button type="button" class="ins-chip" data-q="换一种更高级现代的视觉风格，保持结构不变">换风格</button>
+            <button type="button" class="ins-chip" data-q="把这里的字号 / 尺寸调大一些，更醒目">变大</button>
+            <button type="button" class="ins-chip" data-q="换一套更好看的主题配色">换颜色</button>
+            <button type="button" class="ins-chip" data-q="基于当前页面主题，把这个结构整体重新生成得更精致">重新生成</button>
+          </div>
+          <button id="ins-apply" type="button" class="glow-btn w-full text-white text-xs font-bold rounded-lg py-2 flex items-center justify-center gap-2">
+            <span id="ins-apply-lbl">应用修改</span>
+            <svg id="ins-apply-spin" class="spin hidden" width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-dasharray="40 60"/></svg>
+          </button>
+        </div>
+        <p id="ins-noedit" class="hidden text-[11px] text-amber-400/90 leading-snug">该结构没有可编辑标识（data-node-id）。请重启服务后重新生成页面，即可对它做自然语言编辑。</p>
+
+        <button id="ins-copy" type="button" class="w-full text-xs px-3 py-1.5 mt-2 rounded-lg border border-white/10 text-zinc-300 hover:text-white hover:border-indigo-500/60 hover:bg-indigo-500/10 transition">复制该结构 HTML</button>
+      </div>
     </section>
   </main>
 
   <!-- 登录 / 注册弹窗 -->
   <div id="auth-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-5 modal-overlay">
-    <div class="bg-zinc-900 border border-zinc-700 rounded-3xl p-8 w-full max-w-sm">
+    <div class="bg-zinc-900 border border-white/10 rounded-3xl p-8 w-full max-w-sm shadow-2xl shadow-black/50">
       <h2 id="auth-title" class="text-xl font-bold mb-6">登录</h2>
-      <input id="auth-username" placeholder="用户名" class="w-full mb-3 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500">
-      <input id="auth-password" type="password" placeholder="密码" class="w-full mb-5 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500">
+      <input id="auth-username" placeholder="用户名" class="w-full mb-3 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 transition">
+      <input id="auth-password" type="password" placeholder="密码" class="w-full mb-5 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 transition">
       <p id="auth-msg" class="text-xs h-5 mb-4"></p>
       <div class="flex gap-3">
-        <button id="btn-auth-action" class="flex-1 bg-indigo-500 hover:bg-indigo-400 rounded-xl py-3 text-sm font-bold transition">登录</button>
+        <button id="btn-auth-action" class="flex-1 glow-btn text-white rounded-xl py-3 text-sm font-bold">登录</button>
         <button id="btn-auth-switch" class="flex-1 bg-zinc-800 hover:bg-zinc-700 rounded-xl py-3 text-sm transition">去注册</button>
       </div>
       <button id="btn-auth-close" class="mt-4 w-full text-xs text-zinc-600 hover:text-zinc-400 transition">取消</button>
     </div>
   </div>
 
+  <!-- 入场动画：与首页一致使用 GSAP -->
+  <script>
+    (function () {
+      var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (reduce || !window.gsap) {
+        document.querySelectorAll('.reveal').forEach(function (el) { el.style.opacity = 1; });
+        return;
+      }
+      gsap.set('.reveal', { opacity: 0 });
+      var tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+      tl.from('#app-header', { y: -24, opacity: 0, duration: .55 })
+        .to('[data-intro-preview]', { opacity: 1, duration: .7 }, '-=.2')
+        .from('[data-intro-preview]', { scale: .98, transformOrigin: '50% 40%', duration: .7 }, '<')
+        .to('[data-intro]', { opacity: 1, y: 0, duration: .5, stagger: .07 }, '-=.5')
+        .from('[data-intro]', { y: 16, duration: .5, stagger: .07 }, '<');
+
+      // 预览渲染完成时淡入，让结果"浮现"而非突现
+      var preview = document.getElementById('preview');
+      if (preview) {
+        preview.addEventListener('load', function () {
+          if (!preview.srcdoc) return;
+          gsap.fromTo(preview, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: .55, ease: 'power2.out' });
+        });
+      }
+
+      // 兜底看门狗：4s 后强制揭示任何仍隐藏的 .reveal —— 避免动画异常导致内容（如生成历史）永久不显示
+      setTimeout(function () {
+        document.querySelectorAll('.reveal').forEach(function (el) {
+          if (parseFloat(getComputedStyle(el).opacity) < 0.05) { el.style.opacity = 1; el.style.transform = 'none'; }
+        });
+      }, 4000);
+    })();
+  </script>
   <script src="app.js"></script>
 </body>
 </html>
