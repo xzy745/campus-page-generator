@@ -107,6 +107,20 @@ EXAMPLES.forEach((ex) => {
   $("examples").appendChild(b);
 });
 
+// ─── 从 URL 预填生成指令（示例画廊「在 Studio 复现」跳转过来即带着该专业的小站指令）──
+(function () {
+  try {
+    var p = new URLSearchParams(location.search).get("prompt");
+    if (!p || !promptEl) return;
+    promptEl.value = p;
+    promptEl.focus();
+    promptEl.setSelectionRange(p.length, p.length);
+    promptEl.scrollIntoView({ behavior: "smooth", block: "center" });
+    // 清掉地址栏里的长 query，保持干净（已预填的内容不受影响）
+    if (history.replaceState) history.replaceState(null, "", location.pathname);
+  } catch (e) {}
+})();
+
 // ─── 快捷标签：点一下把题材 / 配色 / 风格加进描述框 ──
 const QUICK_TAGS = [
   { g: "题材", items: ["科技 SaaS", "校园教育", "餐饮咖啡", "摄影作品集", "电商零售", "医疗健康", "旅游民宿", "游戏娱乐", "金融商务"] },

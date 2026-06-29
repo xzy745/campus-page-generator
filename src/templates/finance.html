@@ -84,13 +84,15 @@
     <div id="chart" class="space-y-5"></div>
   </section>
 
-  <!-- 校友轮播 -->
+  <!-- 校友轮播（淡入淡出 · 箭头 + 圆点 + 自动播放 + 悬停暂停 + 键盘） -->
   <section class="reveal max-w-6xl mx-auto px-6 py-16">
     <p class="mono text-xs tracking-[0.25em] uppercase" style="color:var(--theme)">Voices</p>
     <h2 class="text-2xl md:text-3xl font-bold mt-1 mb-6">校友说</h2>
-    <div class="panel p-8 relative min-h-[9rem]">
-      <div id="testi"></div>
-      <div class="flex gap-2 mt-6" id="testi-dots"></div>
+    <div id="testi-carousel" class="panel relative overflow-hidden" style="min-height:13rem" tabindex="0" role="group" aria-roledescription="轮播" aria-label="校友评价轮播">
+      <div id="testi" class="relative" style="min-height:13rem"></div>
+      <button id="testi-prev" type="button" class="absolute left-3 top-1/2 -translate-y-1/2 grid place-items-center rounded-full text-xl leading-none transition hover:bg-white/10" style="width:44px;height:44px;background:rgba(255,255,255,.04);border:1px solid var(--line)" aria-label="上一条">‹</button>
+      <button id="testi-next" type="button" class="absolute right-3 top-1/2 -translate-y-1/2 grid place-items-center rounded-full text-xl leading-none transition hover:bg-white/10" style="width:44px;height:44px;background:rgba(255,255,255,.04);border:1px solid var(--line)" aria-label="下一条">›</button>
+      <div id="testi-dots" class="absolute left-0 right-0 bottom-4 flex justify-center gap-2"></div>
     </div>
     <div class="mt-12 text-center"><a href="index.html" class="mono text-sm" style="color:var(--dim)">← 返回示例画廊</a></div>
   </section>
@@ -147,20 +149,57 @@
     var chartIO = new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting){ e.target.querySelectorAll('.bar').forEach(function(b){ b.style.width = b.getAttribute('data-w')+'%'; }); chartIO.unobserve(e.target);} }); }, { threshold:.4 });
     chartIO.observe(chart);
 
-    /* 校友轮播 */
+    /* 校友轮播：绝对定位叠放 + opacity 淡入淡出 + 箭头/圆点/自动播放/悬停暂停/键盘 */
     var TS = [
       ['"在这里学会的不是某个工具，而是把复杂问题拆成可执行步骤的习惯。"','2021 届 · 现就职于头部咨询'],
       ['"数据课和实习让我提前看清了行业，求职时方向很明确。"','2022 届 · 互联网运营'],
       ['"导师带着做的科研项目，成了我申请深造最有力的材料。"','2020 届 · 海外读研']
     ];
-    var box = document.getElementById('testi'), dots = document.getElementById('testi-dots'), ti = 0;
-    function renderTesti(i){
-      box.innerHTML = '<p class="text-xl leading-relaxed">'+TS[i][0]+'</p><p class="mono text-sm mt-4" style="color:var(--dim)">'+TS[i][1]+'</p>';
-      Array.prototype.forEach.call(dots.children, function(d,idx){ d.style.background = idx===i ? theme : 'var(--line)'; });
+    var carousel = document.getElementById('testi-carousel');
+    var box = document.getElementById('testi'), dots = document.getElementById('testi-dots'), ti = 0, N = TS.length, timer = null;
+    // 构建叠放的幻灯片（绝对定位 + 淡入淡出）
+    box.innerHTML = TS.map(function(t,i){
+      return '<figure class="slide absolute inset-0 flex flex-col justify-center px-14 md:px-16 py-8" style="opacity:'+(i===0?1:0)+';pointer-events:'+(i===0?'auto':'none')+'">'
+        + '<blockquote class="text-lg md:text-xl leading-relaxed">'+t[0]+'</blockquote>'
+        + '<figcaption class="mono text-sm mt-4" style="color:var(--dim)">'+t[1]+'</figcaption></figure>';
+    }).join('');
+    var slides = box.querySelectorAll('.slide');
+    // 圆点
+    for (var di=0; di<N; di++){
+      var d = document.createElement('button');
+      d.type = 'button';
+      d.setAttribute('aria-label', '第 '+(di+1)+' 条');
+      d.style.cssText = 'width:28px;height:6px;border-radius:999px;background:var(--line);transition:background .3s';
+      (function(idx){ d.addEventListener('click', function(){ go(idx); restart(); }); })(di);
+      dots.appendChild(d);
     }
-    TS.forEach(function(_,i){ var d=document.createElement('button'); d.style.cssText='width:28px;height:4px;border-radius:999px;background:var(--line)'; d.onclick=function(){ ti=i; renderTesti(ti); }; dots.appendChild(d); });
-    renderTesti(0);
-    if (!reduce) setInterval(function(){ ti=(ti+1)%TS.length; renderTesti(ti); }, 5000);
+    function show(i){
+      ti = (i + N) % N;
+      for (var s=0; s<slides.length; s++){
+        var on = s === ti;
+        slides[s].style.opacity = on ? 1 : 0;
+        slides[s].style.pointerEvents = on ? 'auto' : 'none';
+      }
+      Array.prototype.forEach.call(dots.children, function(dot,idx){ dot.style.background = idx===ti ? theme : 'var(--line)'; });
+    }
+    function go(i){ show(i); }
+    function next(){ show(ti+1); }
+    function prev(){ show(ti-1); }
+    function start(){ if (!reduce && !timer) timer = setInterval(next, 5000); }
+    function stop(){ if (timer){ clearInterval(timer); timer = null; } }
+    function restart(){ stop(); start(); }
+    show(0);
+    document.getElementById('testi-prev').addEventListener('click', function(){ prev(); restart(); });
+    document.getElementById('testi-next').addEventListener('click', function(){ next(); restart(); });
+    carousel.addEventListener('mouseenter', stop);
+    carousel.addEventListener('mouseleave', start);
+    carousel.addEventListener('focusin', stop);
+    carousel.addEventListener('focusout', start);
+    carousel.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowLeft'){ prev(); restart(); }
+      else if (e.key === 'ArrowRight'){ next(); restart(); }
+    });
+    start();
   })();
   </script>
 </body>

@@ -73,11 +73,40 @@
     </div>
   </div>
 
+  <!-- 策展前言（让"展览"有内容，不只是图） -->
+  <section class="reveal px-6 py-16 border-b border-white/10">
+    <div class="max-w-5xl">
+      <p class="text-xs tracking-[0.4em] uppercase mb-5" style="color:var(--theme)">策 · 展 前 言</p>
+      <p class="text-2xl md:text-4xl leading-snug disp">看见，是一种需要练习的能力。</p>
+      <div class="grid md:grid-cols-3 gap-8 mt-10 text-white/60 leading-relaxed">
+        <p>这一专业训练的，不是把手画准，而是把世界看清——在习以为常处发现陌生，在杂乱里读出秩序。</p>
+        <p>创作是提问的方式。每一件作品都是一次假设：把模糊的感受，变成可以被讨论、被反驳、被继续的形式。</p>
+        <p>技法只是入口。真正稀缺的，是判断力与表达欲——知道为什么这样做，并让别人也看见你之所见。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 展厅轮播：同一主题的多种处理，淡入淡出 · 箭头 + 圆点 + 自动播放 + 悬停暂停 + 键盘 -->
+  <section class="reveal px-6 py-16">
+    <div class="flex items-end justify-between mb-8">
+      <h2 class="disp text-3xl md:text-5xl">展 · 厅</h2>
+      <span class="text-xs text-white/40">自动轮播 · 可切换</span>
+    </div>
+    <div id="stage" class="relative overflow-hidden rounded-2xl" style="aspect-ratio:16/9;background:#0a0a0a" tabindex="0" role="group" aria-roledescription="轮播" aria-label="展厅作品轮播">
+      <div id="stage-track" class="absolute inset-0"></div>
+      <div class="absolute inset-0 pointer-events-none" style="background:linear-gradient(transparent 55%, rgba(0,0,0,.78))"></div>
+      <button id="stage-prev" type="button" class="absolute left-4 top-1/2 -translate-y-1/2 z-10 grid place-items-center rounded-full text-2xl leading-none" style="width:48px;height:48px;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.25)" aria-label="上一件">‹</button>
+      <button id="stage-next" type="button" class="absolute right-4 top-1/2 -translate-y-1/2 z-10 grid place-items-center rounded-full text-2xl leading-none" style="width:48px;height:48px;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.25)" aria-label="下一件">›</button>
+      <div id="stage-cap" class="absolute left-6 bottom-6 z-10"></div>
+      <div id="stage-dots" class="absolute right-6 bottom-7 z-10 flex gap-2"></div>
+    </div>
+  </section>
+
   <!-- 作品网格（灯箱） -->
   <section class="reveal px-6 py-16">
     <div class="flex items-end justify-between mb-8">
       <h2 class="disp text-3xl md:text-5xl">选 · 作</h2>
-      <span class="text-xs text-white/40">点击放大 ↗</span>
+      <span class="text-xs text-white/40">点击放大 · ← → 翻看</span>
     </div>
     <div id="grid" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
   </section>
@@ -99,8 +128,14 @@
     © 2026 · ${majorName}（${department}）· 由「对话即渲染」生成器产出
   </footer>
 
-  <!-- 灯箱 -->
-  <div id="lb"><img id="lb-img" src="" alt="放大作品" /></div>
+  <!-- 灯箱（可左右翻看） -->
+  <div id="lb">
+    <button id="lb-close" type="button" class="absolute top-5 right-5 grid place-items-center rounded-full text-xl" style="width:48px;height:48px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.3)" aria-label="关闭">✕</button>
+    <button id="lb-prev" type="button" class="absolute left-5 top-1/2 -translate-y-1/2 grid place-items-center rounded-full text-2xl" style="width:52px;height:52px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.25)" aria-label="上一件">‹</button>
+    <img id="lb-img" src="" alt="放大作品" />
+    <button id="lb-next" type="button" class="absolute right-5 top-1/2 -translate-y-1/2 grid place-items-center rounded-full text-2xl" style="width:52px;height:52px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.25)" aria-label="下一件">›</button>
+    <span id="lb-cap" class="absolute bottom-6 left-1/2 -translate-x-1/2 disp text-sm text-white/70"></span>
+  </div>
 
   <script>
   (function(){
@@ -120,19 +155,70 @@
     } else { cur.style.display = 'none'; }
 
     /* 作品网格 + 灯箱（用主题图配不同滤镜，模拟多件作品） */
+    var HERO = '${heroImage}';
     var FILTERS = ['none','grayscale(1)','contrast(1.4) saturate(.4)','hue-rotate(40deg)','sepia(.5)','grayscale(1) contrast(1.3)','saturate(1.6)','invert(.08) contrast(1.2)'];
     var TITLES = ['静观','切片','负空间','色温','显影','质地','饱和','边界'];
     var grid = document.getElementById('grid');
     grid.innerHTML = FILTERS.map(function(f,i){
-      return '<button class="work" data-f="'+f+'"><img src="${heroImage}" alt="'+TITLES[i]+'" style="filter:'+f+'" onerror="this.parentNode.style.background=\'var(--theme)\'"/>'
+      return '<button class="work" data-i="'+i+'"><img src="'+HERO+'" alt="'+TITLES[i]+'" style="filter:'+f+'" onerror="this.parentNode.style.background=\'var(--theme)\'"/>'
         +'<span class="cap text-left"><span class="disp text-sm">'+String(i+1).padStart(2,'0')+'</span><br><span class="text-xs text-white/70">'+TITLES[i]+'</span></span></button>';
     }).join('');
-    var lb = document.getElementById('lb'), lbImg = document.getElementById('lb-img');
-    grid.querySelectorAll('.work').forEach(function(w){
-      w.addEventListener('click', function(){ var img = w.querySelector('img'); lbImg.src = img.src; lbImg.style.filter = w.getAttribute('data-f'); lb.classList.add('on'); });
+
+    /* 灯箱：可左右翻看 + 关闭 */
+    var lb = document.getElementById('lb'), lbImg = document.getElementById('lb-img'), lbCap = document.getElementById('lb-cap'), lbIdx = 0;
+    function showLB(i){
+      lbIdx = (i + FILTERS.length) % FILTERS.length;
+      lbImg.src = HERO; lbImg.style.filter = FILTERS[lbIdx];
+      lbCap.textContent = String(lbIdx+1).padStart(2,'0') + ' · ' + TITLES[lbIdx];
+    }
+    function openLB(i){ showLB(i); lb.classList.add('on'); }
+    function closeLB(){ lb.classList.remove('on'); }
+    grid.querySelectorAll('.work').forEach(function(w){ w.addEventListener('click', function(){ openLB(+w.getAttribute('data-i')); }); });
+    document.getElementById('lb-close').addEventListener('click', closeLB);
+    document.getElementById('lb-prev').addEventListener('click', function(e){ e.stopPropagation(); showLB(lbIdx-1); });
+    document.getElementById('lb-next').addEventListener('click', function(e){ e.stopPropagation(); showLB(lbIdx+1); });
+    lbImg.addEventListener('click', function(e){ e.stopPropagation(); });   /* 点图不关闭 */
+    lb.addEventListener('click', closeLB);                                   /* 点背景关闭 */
+    document.addEventListener('keydown', function(e){
+      if (!lb.classList.contains('on')) return;
+      if (e.key === 'Escape') closeLB();
+      else if (e.key === 'ArrowLeft') showLB(lbIdx-1);
+      else if (e.key === 'ArrowRight') showLB(lbIdx+1);
     });
-    lb.addEventListener('click', function(){ lb.classList.remove('on'); });
-    document.addEventListener('keydown', function(e){ if(e.key==='Escape') lb.classList.remove('on'); });
+
+    /* 展厅轮播：淡入淡出 + 箭头/圆点/自动播放/悬停暂停/键盘 */
+    var STAGE = [0,1,3,4,6];   /* 选用差异更明显的几种处理 */
+    var track = document.getElementById('stage-track'), sCap = document.getElementById('stage-cap'), sDots = document.getElementById('stage-dots');
+    var stageEl = document.getElementById('stage'), si = 0, sTimer = null, SN = STAGE.length;
+    track.innerHTML = STAGE.map(function(fi,i){
+      return '<img class="gslide" src="'+HERO+'" alt="'+TITLES[fi]+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:'+FILTERS[fi]+';opacity:'+(i===0?1:0)+';transition:opacity .7s" onerror="this.style.background=\'var(--theme)\'"/>';
+    }).join('');
+    var gslides = track.querySelectorAll('.gslide');
+    for (var k=0;k<SN;k++){
+      var dot = document.createElement('button');
+      dot.type='button'; dot.setAttribute('aria-label','第 '+(k+1)+' 件');
+      dot.style.cssText='width:30px;height:6px;border-radius:999px;background:rgba(255,255,255,.3);transition:background .3s';
+      (function(idx){ dot.addEventListener('click', function(){ showStage(idx); sRestart(); }); })(k);
+      sDots.appendChild(dot);
+    }
+    function showStage(i){
+      si = (i + SN) % SN;
+      for (var s=0;s<gslides.length;s++) gslides[s].style.opacity = s===si ? 1 : 0;
+      Array.prototype.forEach.call(sDots.children, function(d,idx){ d.style.background = idx===si ? 'var(--theme)' : 'rgba(255,255,255,.3)'; });
+      sCap.innerHTML = '<span class="disp text-lg">'+TITLES[STAGE[si]]+'</span><br><span class="text-xs text-white/50">'+String(si+1).padStart(2,'0')+' / '+String(SN).padStart(2,'0')+'</span>';
+    }
+    function sStart(){ if(!reduce && !sTimer) sTimer = setInterval(function(){ showStage(si+1); }, 4500); }
+    function sStop(){ if(sTimer){ clearInterval(sTimer); sTimer=null; } }
+    function sRestart(){ sStop(); sStart(); }
+    showStage(0);
+    document.getElementById('stage-prev').addEventListener('click', function(){ showStage(si-1); sRestart(); });
+    document.getElementById('stage-next').addEventListener('click', function(){ showStage(si+1); sRestart(); });
+    stageEl.addEventListener('mouseenter', sStop);
+    stageEl.addEventListener('mouseleave', sStart);
+    stageEl.addEventListener('focusin', sStop);
+    stageEl.addEventListener('focusout', sStart);
+    stageEl.addEventListener('keydown', function(e){ if(e.key==='ArrowLeft'){ showStage(si-1); sRestart(); } else if(e.key==='ArrowRight'){ showStage(si+1); sRestart(); } });
+    sStart();
 
     /* 横向拖拽 */
     var hs = document.getElementById('hs'), down=false, sx, sl;

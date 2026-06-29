@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>网页能力规格书 · 6 项构建能力的可视化演示</title>
-  <meta name="description" content="把一个网页拆成 6 项能力：HTML 语义结构、CSS 高级视觉、JS 交互、Vue 路由、数据渲染、搜索筛选。每一项都内嵌一个能直接上手的实时 demo。" />
-  <meta property="og:title" content="网页能力规格书 · 6 项构建能力的可视化演示" />
+  <title>网页拆解 · 把一个网页拆成 6 项能力的可视化演示</title>
+  <meta name="description" content="网页拆解：把一个网页拆成 6 项能力——HTML 语义结构、CSS 高级视觉、JS 交互、Vue 路由、数据渲染、搜索筛选。每一项都内嵌一个能直接上手的实时 demo。" />
+  <meta property="og:title" content="网页拆解 · 把一个网页拆成 6 项能力的可视化演示" />
   <meta property="og:description" content="HTML 语义、CSS 视觉、JS 交互、Vue 路由、数据渲染、搜索筛选——每一项都内嵌可上手的实时 demo。" />
   <meta property="og:type" content="website" />
   <meta property="og:image" content="/assets/majors/计算机类.jpg" />
@@ -15,6 +15,11 @@
   <script>
     (function(){ try {
       var n = window.matchMedia.bind(window);
+      // 无障碍：在「中和误报的覆写」之前，先把系统真实的减少动画偏好记下来，
+      // 供水墨涟漪 / 大动效据此降级（覆写只为防止 Edge 误报把内容 reveal 卡成空白，二者互不冲突）。
+      window.__reduceMotion = false;
+      try { window.__reduceMotion = !!n('(prefers-reduced-motion: reduce)').matches; } catch(e){}
+      if (window.__reduceMotion) document.documentElement.classList.add('reduce-motion');
       function f(q,m){ return { matches:m, media:q, onchange:null, addListener:function(){}, removeListener:function(){}, addEventListener:function(){}, removeEventListener:function(){}, dispatchEvent:function(){return false;} }; }
       window.matchMedia = function(q){ if (typeof q==='string'){ if (/prefers-reduced-motion\s*:\s*reduce/i.test(q)) return f(q,false); if (/prefers-reduced-motion\s*:\s*no-preference/i.test(q)) return f(q,true); } return n(q); };
       // 标记 JS 可用：CSS 据此预隐藏 reveal 元素；本脚本若没跑成功，就不会加 .js，内容照常显示，绝不空白
@@ -31,7 +36,9 @@
   <link rel="preconnect" href="https://fonts.loli.net" />
   <link rel="preconnect" href="https://gstatic.loli.net" crossorigin />
   <link href="https://fonts.loli.net/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tailwind：构建期预编译的静态 CSS（仅含本页用到的工具类，~11KB），取代 cdn.tailwindcss.com 的浏览器内即时编译开发版。
+       改动工具类后需重跑 `npm run build:skills-css` 重新生成。 -->
+  <link rel="stylesheet" href="./tailwind.css" />
 
   <style>
     :root {
@@ -43,6 +50,8 @@
     }
     *{ box-sizing:border-box; }
     html{ scroll-behavior:smooth; scroll-padding-top:7.25rem; touch-action:manipulation; }
+    /* 小屏：分节导航不再吸顶（随内容滚走），锚点偏移只需让开固定页眉 */
+    @media (max-width:639px){ html{ scroll-padding-top:4.75rem; } .spec{ scroll-margin-top:4.75rem; } }
     body{ background:var(--ink); color:var(--text);
       font-family:'Inter','Noto Sans SC','PingFang SC','HarmonyOS Sans SC','Microsoft YaHei',system-ui,sans-serif; }
     /* 蓝图栅格底：本页 signature 的承载层（淡到几乎只在余光里） */
@@ -57,7 +66,7 @@
 
     :focus-visible{ outline:2.5px solid var(--cyan); outline-offset:3px; border-radius:4px; }
     a,button,[role=button],input,select,label.tap{ cursor:pointer; }
-    button,[role=button]{ min-height:40px; }
+    button,[role=button]{ min-height:44px; }   /* 无障碍：触控目标下限 ≥44px */
     .skip-link{ position:absolute; top:-100px; left:16px; background:var(--blue); color:#fff; padding:.5rem 1rem; border-radius:0 0 8px 8px; z-index:9999; font-size:.85rem; font-weight:600; transition:top .2s ease; text-decoration:none; }
     .skip-link:focus{ top:0; }
 
@@ -110,9 +119,9 @@
     .codechip{ font-family:'JetBrains Mono',monospace; font-size:.74rem; line-height:1.7; color:#a9b8e8; background:#0a0e1a; border:1px solid var(--line); border-radius:10px; padding:.8rem 1rem; white-space:pre-wrap; word-break:break-word; }
     .codechip .k{ color:var(--cyan); } .codechip .p{ color:var(--amber); } .codechip .s{ color:#9fe6a0; }
 
-    html.js [data-reveal]{ opacity:0; transform:translateY(24px) scale(.992); filter:blur(6px);
-      transition:opacity .7s cubic-bezier(.16,1,.3,1),transform .7s cubic-bezier(.16,1,.3,1),filter .7s ease; }
-    html.js [data-reveal].in{ opacity:1; transform:none; filter:blur(0); }
+    html.js [data-reveal]{ opacity:0; transform:translateY(22px) scale(.992);
+      transition:opacity .5s cubic-bezier(.16,1,.3,1),transform .5s cubic-bezier(.16,1,.3,1); }
+    html.js [data-reveal].in{ opacity:1; transform:none; }
     [v-cloak]{ display:none; }
 
     /* 01 语义结构 demo */
@@ -145,7 +154,7 @@
     .ripple{ position:absolute; border-radius:50%; transform:scale(0); background:rgba(255,255,255,.45); animation:rip .6s ease-out forwards; pointer-events:none; }
     @keyframes rip{ to{ transform:scale(4); opacity:0; } }
     .bar-track{ height:10px; border-radius:99px; background:var(--line-strong); overflow:hidden; }
-    .bar-fill{ height:100%; background:linear-gradient(90deg,var(--blue),var(--cyan)); transition:width .12s linear; }
+    .bar-fill{ height:100%; width:100%; transform-origin:left; transform:scaleX(0); background:linear-gradient(90deg,var(--blue),var(--cyan)); transition:transform .12s linear; }
     .toast{ position:fixed; left:50%; bottom:32px; transform:translate(-50%,140%); opacity:0; visibility:hidden; z-index:200; background:var(--panel-2); border:1px solid var(--cyan); color:var(--text); padding:.7rem 1.2rem; border-radius:12px; font-size:.85rem; box-shadow:0 18px 50px -16px rgba(0,0,0,.8); pointer-events:none; transition:transform .4s cubic-bezier(.16,1,.3,1), opacity .35s ease, visibility .4s; }
     .toast.show{ transform:translate(-50%,0); opacity:1; visibility:visible; }
 
@@ -161,7 +170,7 @@
     .vmsg.ok{ color:var(--green); } .vmsg.err{ color:var(--red); }
     .field.ok{ border-color:rgba(74,222,128,.55); } .field.err{ border-color:rgba(251,113,133,.6); }
     .pwd-meter{ height:6px; border-radius:99px; background:var(--line-strong); overflow:hidden; }
-    .pwd-meter span{ display:block; height:100%; width:0; background:var(--blue); transition:width .3s ease,background .3s ease; }
+    .pwd-meter span{ display:block; height:100%; width:100%; transform-origin:left; transform:scaleX(0); background:var(--blue); transition:transform .3s ease,background .3s ease; }
     .timer-display{ font-size:clamp(2.2rem,5vw,2.8rem); font-weight:700; color:var(--cyan); letter-spacing:.04em; line-height:1.1; }
     .typewriter{ font-size:1rem; color:var(--text); min-height:1.6rem; }
     .typewriter::after{ content:'▋'; color:var(--cyan); margin-left:1px; animation:twcar 1s step-end infinite; }
@@ -184,13 +193,30 @@
     .vchip{ font-family:'JetBrains Mono',monospace; font-size:.66rem; padding:.12rem .5rem; border-radius:999px; border:1px solid var(--line-strong); color:var(--dim); }
     .vtab{ font-size:.82rem; padding:.5rem .95rem; border-radius:10px; color:var(--dim); border:1px solid transparent; transition:.2s; }
     .vtab.on{ color:var(--text); border-color:var(--line-strong); background:rgba(91,140,255,.1); }
-    .vfade-enter-active,.vfade-leave-active{ transition:opacity .28s ease,transform .28s ease; }
-    .vfade-enter-from{ opacity:0; transform:translateY(8px); }
-    .vfade-leave-to{ opacity:0; transform:translateY(-8px); position:absolute; }
+    .vfade-enter-active{ transition:opacity .4s cubic-bezier(.16,1,.3,1),transform .4s cubic-bezier(.16,1,.3,1); transition-delay:var(--vd,0ms); }
+    .vfade-leave-active{ transition:opacity .25s cubic-bezier(.4,0,1,1),transform .25s cubic-bezier(.4,0,1,1); }   /* 离场更快（ease-in），约入场的 60% */
+    .vfade-enter-from{ opacity:0; transform:translateY(10px) scale(.97); }
+    .vfade-leave-to{ opacity:0; transform:translateY(-10px) scale(.97); position:absolute; }
+    .vfade-move{ transition:transform .42s cubic-bezier(.16,1,.3,1); }   /* 排序时卡片平滑滑位 */
+
+    /* —— 多维数据徽标：热度条 / 评级 / 就业率 / 统计胶囊 —— */
+    .heatbar{ height:5px; border-radius:99px; background:var(--line-strong); overflow:hidden; }
+    .heatbar i{ display:block; height:100%; width:100%; transform-origin:left; border-radius:99px; transition:transform .6s cubic-bezier(.16,1,.3,1); }
+    .rating{ font-family:'JetBrains Mono',monospace; font-size:.62rem; font-weight:700; letter-spacing:.02em;
+      padding:.06rem .34rem; border-radius:6px; background:rgba(8,11,20,.78); border:1px solid rgba(255,255,255,.16); -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px); }
+    .statpill{ display:inline-flex; align-items:baseline; gap:.35rem; padding:.3rem .7rem; border-radius:10px;
+      background:#0a0e1a; border:1px solid var(--line); }
+    .statpill .num{ font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:1.05rem; line-height:1; color:var(--cyan); }
+    .statpill .lbl{ font-family:'JetBrains Mono',monospace; font-size:.62rem; letter-spacing:.06em; color:var(--mut); }
+    .sortbtn{ font-size:.72rem; padding:.32rem .7rem; border-radius:8px; color:var(--dim); border:1px solid var(--line-strong); transition:.2s; }
+    .sortbtn:hover{ color:var(--text); border-color:var(--cyan); }
+    .sortbtn.on{ color:#06210f; background:var(--cyan); border-color:var(--cyan); font-weight:600; }
+    .data-row{ transition:background .2s; }
+    .data-row:hover{ background:rgba(91,140,255,.06); }
 
     /* ===== 动画增强：进度条 / 导航游标 / 行级联 / 巨号视差 / 按钮流光 ===== */
     /* 顶部阅读进度条 */
-    #read-bar{ position:fixed; top:0; left:0; height:2px; width:0; z-index:60; pointer-events:none;
+    #read-bar{ position:fixed; top:0; left:0; height:2px; width:100%; transform-origin:left; transform:scaleX(0); z-index:60; pointer-events:none;
       background:linear-gradient(90deg,var(--blue),var(--cyan)); box-shadow:0 0 12px rgba(52,227,212,.6); }
 
     /* 分节导航：滑动游标（取代硬切背景高亮） */
@@ -201,25 +227,72 @@
       background:rgba(91,140,255,.14); border:1px solid var(--line-strong);
       transition:transform .36s cubic-bezier(.16,1,.3,1),width .36s cubic-bezier(.16,1,.3,1),height .2s,opacity .25s; }
 
-    /* 巨号 specnum：随滚动轻微视差浮动 + 进场扫光（青色描边亮一下再落定） */
-    .specnum{ will-change:transform; }
+    /* 巨号 specnum：随滚动轻微视差浮动 + 进场扫光（青色描边亮一下再落定）
+       不再常驻 will-change（浏览器会在动画期间自动合成；premium 要求用完即卸，而 .lit 类是常驻的，故干脆不挂） */
     .specnum.lit{ animation:specScan 1.1s cubic-bezier(.16,1,.3,1) both; }
     @keyframes specScan{
-      0%{ -webkit-text-stroke-color:var(--cyan); filter:drop-shadow(0 0 14px rgba(52,227,212,.55)); opacity:.35; }
+      0%{ -webkit-text-stroke-color:var(--accent,var(--cyan)); filter:drop-shadow(0 0 14px var(--accent,var(--cyan))); opacity:.35; }
       55%{ opacity:1; }
       100%{ -webkit-text-stroke-color:var(--line-strong); filter:none; opacity:1; }
     }
 
-    /* 交互光斑：跟随鼠标的柔光层（浮在栅格之上、内容之下） */
-    #cursor-spot{ position:fixed; top:0; left:0; width:400px; height:400px; z-index:-1; pointer-events:none; opacity:0;
-      background:radial-gradient(circle,rgba(91,140,255,.12),rgba(52,227,212,.05) 40%,transparent 68%);
-      transition:opacity .4s ease; will-change:transform; }
+    /* 鼠标跟随的「水墨涟漪」由 ink-ripple.js（Three.js WebGL 水波）承载，#ink-ripple 画布于 JS 中创建 */
 
     /* 主按钮流光：hover 时一道高光斜扫而过 */
     .btn-primary{ position:relative; overflow:hidden; }
     .btn-primary::after{ content:''; position:absolute; top:0; left:-130%; width:55%; height:100%; pointer-events:none;
       background:linear-gradient(100deg,transparent,rgba(255,255,255,.38),transparent); transform:skewX(-18deg); transition:left .6s ease; }
     .btn-primary:hover::after{ left:150%; }
+
+    /* ===== 美化增强：英雄焦点 / 六节配色身份 / 噪点质感 ===== */
+    /* 英雄：标题逐字入场（模糊上浮）＋数字持续辉光＋图框四角描边绘制 */
+    .hero-title .hw{ display:inline-block; opacity:0; transform:translateY(.5em);
+      animation:hwIn .6s cubic-bezier(.16,1,.3,1) both; }
+    /* numGlow 收敛为有限 4 次，落定后不再持续重绘（text-shadow 非合成层） */
+    .hero-title .hnum{ animation:hwIn .6s cubic-bezier(.16,1,.3,1) both, numGlow 2.6s 1.2s ease-in-out 4; }
+    @keyframes hwIn{ to{ opacity:1; transform:none; } }
+    @keyframes numGlow{ 0%,100%{ text-shadow:0 0 0 transparent; } 50%{ text-shadow:0 0 26px rgba(52,227,212,.5); } }
+    .frame::before,.frame::after{ animation:cornerDraw .55s .25s cubic-bezier(.16,1,.3,1) both; }
+    @keyframes cornerDraw{ from{ width:0; height:0; opacity:0; } to{ width:14px; height:14px; opacity:.65; } }
+
+    /* 六节配色身份：每节 section 上设 --accent，染 eyebrow 引线 + 巨号进场闪光（导航游标在 JS 里跟随） */
+    .spec .eyebrow{ position:relative; padding-left:1.15rem; color:var(--accent,var(--blue)); }
+    .spec .eyebrow::before{ content:''; position:absolute; left:0; top:50%; width:.78rem; height:2px; margin-top:-1px;
+      border-radius:2px; background:var(--accent,var(--blue)); box-shadow:0 0 9px var(--accent,var(--blue)); }
+    .spec h2{ position:relative; }
+
+    /* 细噪点底纹：消除深色渐变的色带，画面更有质感（极淡，叠在背景之上、内容之下） */
+    .grain{ position:fixed; inset:0; z-index:-1; pointer-events:none; opacity:.045; mix-blend-mode:overlay;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+
+    /* —— 内联 SVG 图标：统一线性、继承 currentColor（取代 emoji，跨平台一致、可主题色）—— */
+    .ico{ display:inline-block; width:1em; height:1em; vertical-align:-.125em; flex:none; }
+
+    /* —— 数据/计时数字等宽（tabular figures），数值变化时不抖宽 —— */
+    .statpill .num,.timer-display,#like-count,#drag-val{ font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1; }
+
+    /* —— 触控目标 ≥44px（无障碍 CRITICAL）：微小图标补隐形热区；触屏上连紧凑键/导航键也撑满 —— */
+    .chip button,.todo-check{ position:relative; }
+    .chip button::after,.todo-check::after{ content:''; position:absolute; inset:-13px; }
+    @media (pointer:coarse){
+      .btn,.js-tab,.sortbtn,.vtab,.snav{ min-height:44px !important; }
+    }
+
+    /* 无障碍：系统真实要求减少动画时（.reduce-motion 由头部脚本按真实偏好挂上），
+       关掉装饰性动效——水墨涟漪不加载、入场/扫光/流光全停，内容一律直接可见。 */
+    html.reduce-motion{ scroll-behavior:auto; }
+    html.reduce-motion [data-reveal]{ opacity:1 !important; transform:none !important; filter:none !important; transition:none !important; }
+    html.reduce-motion .hero-title .hw,
+    html.reduce-motion .hero-title .hnum{ animation:none !important; opacity:1 !important; transform:none !important; filter:none !important; text-shadow:none !important; }
+    html.reduce-motion .frame::before,
+    html.reduce-motion .frame::after{ animation:none !important; opacity:.65; width:14px; height:14px; }
+    html.reduce-motion .specnum{ transform:none !important; }
+    html.reduce-motion .specnum.lit{ animation:none !important; }
+    html.reduce-motion .btn-primary::after{ display:none !important; }
+    html.reduce-motion .vfade-enter-active,
+    html.reduce-motion .vfade-leave-active,
+    html.reduce-motion .vfade-move{ transition:none !important; }
+    html.reduce-motion #read-bar{ display:none !important; }
 
     @media (prefers-reduced-motion: reduce) and (min-width: 999999px){
       html{ scroll-behavior:auto; }
@@ -228,6 +301,7 @@
   </style>
 </head>
 <body class="antialiased selection:bg-cyan-400/30">
+  <div class="grain" aria-hidden="true"></div>
   <a href="#main" class="skip-link">跳到主要内容</a>
 
   <!-- 顶部条 -->
@@ -235,11 +309,11 @@
     <div class="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between">
       <a href="#main" class="flex items-center gap-2 shrink-0">
         <span class="mono text-xs px-2 py-1 rounded" style="border:1px solid var(--line-strong);color:var(--cyan)">SPEC</span>
-        <span class="display text-sm font-bold">网页能力规格书</span>
+        <span class="display text-sm font-bold">网页拆解</span>
       </a>
       <nav class="flex items-center gap-2 text-xs" aria-label="功能导航">
         <a href="/" class="btn btn-ghost hidden sm:inline-block">← 专业总览</a>
-        <a href="/studio/" class="btn btn-primary">⚡ 开始生成</a>
+        <a href="/studio/" class="btn btn-primary inline-flex items-center gap-1.5"><svg class="ico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2 4.5 13.5H11l-1 8.5L20 9h-6.5L13 2Z"/></svg>开始生成</a>
       </nav>
     </div>
   </header>
@@ -247,7 +321,7 @@
   <main id="main" class="pt-16">
 
     <!-- 吸顶分节导航：6 个能力间快速跳转，滚动时自动高亮当前所在节 -->
-    <nav id="spec-nav" aria-label="能力分节导航" class="sticky top-16 z-40 bg-[#080b14]/85 backdrop-blur border-b" style="border-color:var(--line)">
+    <nav id="spec-nav" aria-label="能力分节导航" class="sm:sticky sm:top-16 z-40 bg-[#080b14]/85 backdrop-blur border-b" style="border-color:var(--line)">
       <div class="max-w-6xl mx-auto px-5">
         <ul class="flex gap-1 overflow-x-auto no-scrollbar py-2.5 text-sm">
           <li><a class="snav" href="#s1" data-sec="s1"><span class="n">01</span> HTML 语义</a></li>
@@ -267,8 +341,8 @@
           <p class="eyebrow">Capability Spec · 对话即渲染</p>
           <p class="mono text-xs" style="color:var(--mut)">DOC&nbsp;No.&nbsp;WEB-2026 ｜ 24计应C·徐致远</p>
         </div>
-        <h1 class="display font-bold leading-[1.04]" style="font-size:clamp(2.2rem,5.6vw,4.1rem)">
-          一个网页，<br class="sm:hidden" />拆成 <span style="color:var(--cyan)">6</span> 块能力。
+        <h1 class="display font-bold leading-[1.04] hero-title" style="font-size:clamp(2.2rem,5.6vw,4.1rem)">
+          <span class="hw" style="animation-delay:.12s">一个网页，</span><br class="sm:hidden" /><span class="hw" style="animation-delay:.26s">拆成&nbsp;</span><span class="hw hnum" style="color:var(--cyan);animation-delay:.40s">6</span><span class="hw" style="animation-delay:.54s">&nbsp;块能力。</span>
         </h1>
         <p class="mt-5 max-w-2xl leading-relaxed" style="color:var(--dim)">
           下面这 6 项，是 AI 生成的每一个页面背后真正在工作的构建层 —— 从骨架到样式、到交互、到框架与数据。
@@ -279,7 +353,7 @@
     </section>
 
     <!-- ===== 01 HTML 语义结构 ===== -->
-    <section id="s1" class="spec max-w-6xl mx-auto px-5 py-14">
+    <section id="s1" class="spec max-w-6xl mx-auto px-5 py-14" style="--accent:#5b8cff">
       <div class="grid lg:grid-cols-[1fr_1.25fr] gap-8 items-start" data-reveal>
         <div>
           <p class="eyebrow mb-3">Structure · 结构层</p>
@@ -329,8 +403,8 @@
     </section>
 
     <!-- ===== 02 CSS 高级视觉 ===== -->
-    <section id="s2" class="spec max-w-6xl mx-auto px-5 py-14">
-      <div class="grid lg:grid-cols-[1fr_1.25fr] gap-8 items-start" data-reveal>
+    <section id="s2" class="spec max-w-6xl mx-auto px-5 py-14" style="--accent:#34e3d4">
+      <div class="grid lg:grid-cols-[1.25fr_1fr] gap-8 items-start" data-reveal>
         <div>
           <p class="eyebrow mb-3">Style · 样式层</p>
           <div class="flex items-center gap-4 mb-3"><span class="specnum">02</span><span class="tag-p0">P0</span></div>
@@ -341,7 +415,7 @@
           </p>
           <p class="leading-relaxed" style="color:var(--mut)">拖动右侧滑块，实时改这张卡片的模糊 / 辉光 / 倾斜，下方代码同步更新。</p>
         </div>
-        <div class="demo">
+        <div class="demo lg:order-first">
           <div class="demo-bar"><span class="dot3" style="background:var(--red)"></span><span class="dot3" style="background:var(--amber)"></span><span class="dot3" style="background:var(--green)"></span><span class="mono text-xs ml-2" style="color:var(--mut)">glassmorphism.css</span></div>
           <div class="p-5">
             <div class="glass-demo mb-5" id="glass-stage">
@@ -366,7 +440,7 @@
     </section>
 
     <!-- ===== 03 JS 交互功能 ===== -->
-    <section id="s3" class="spec max-w-6xl mx-auto px-5 py-14">
+    <section id="s3" class="spec max-w-6xl mx-auto px-5 py-14" style="--accent:#ffb454">
       <div data-reveal>
         <p class="eyebrow mb-3">Behavior · 行为层</p>
         <div class="flex items-center gap-4 mb-3"><span class="specnum">03</span><span class="tag-p0">P0</span></div>
@@ -393,14 +467,14 @@
             <div class="grid md:grid-cols-2 gap-x-8 gap-y-7">
               <div>
                 <p class="lab-label">点击事件 · 涟漪 + 计数</p>
-                <button id="like-btn" class="ripple-btn btn btn-primary !px-5 !py-3">👍 点赞 <span id="like-count" class="mono ml-1">0</span></button>
+                <button id="like-btn" class="ripple-btn btn btn-primary !px-5 !py-3 inline-flex items-center gap-1.5"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 10v10H4V10h3Zm3 0 3.1-6.3A2 2 0 0 1 17 4.6V9h3.1a2 2 0 0 1 2 2.4l-1.2 6A2 2 0 0 1 19 19h-9V10Z"/></svg>点赞 <span id="like-count" class="mono ml-1">0</span></button>
                 <p class="lab-hint">addEventListener('click') + 动态创建涟漪节点</p>
               </div>
               <div>
                 <p class="lab-label">拖拽取值 · 实时绑定</p>
                 <div class="flex justify-between mb-2 text-sm"><span style="color:var(--dim)">报名热度</span><span class="mono" style="color:var(--cyan)"><span id="drag-val">42</span>%</span></div>
                 <input id="drag-range" class="range" type="range" min="0" max="100" value="42">
-                <div class="bar-track mt-3"><div id="drag-bar" class="bar-fill" style="width:42%"></div></div>
+                <div class="bar-track mt-3"><div id="drag-bar" class="bar-fill" style="transform:scaleX(.42)"></div></div>
               </div>
               <div class="md:col-span-2">
                 <p class="lab-label">动态建 DOM · 增删节点 + 即时反馈</p>
@@ -454,7 +528,7 @@
                   <button id="t-pause" class="btn btn-ghost">暂停</button>
                   <button id="t-reset" class="btn btn-ghost">重置</button>
                 </div>
-                <div class="bar-track mt-4"><div id="t-bar" class="bar-fill" style="width:100%"></div></div>
+                <div class="bar-track mt-4"><div id="t-bar" class="bar-fill" style="transform:scaleX(1)"></div></div>
               </div>
               <div>
                 <p class="lab-label">实时时钟</p>
@@ -483,7 +557,7 @@
     </section>
 
     <!-- ===== 04 Vue 路由 ===== -->
-    <section id="s4" class="spec max-w-6xl mx-auto px-5 py-14">
+    <section id="s4" class="spec max-w-6xl mx-auto px-5 py-14" style="--accent:#a78bfa">
       <div class="grid lg:grid-cols-[1fr_1.25fr] gap-8 items-start" data-reveal>
         <div>
           <p class="eyebrow mb-3">Framework · 框架层</p>
@@ -518,8 +592,8 @@
     </section>
 
     <!-- ===== 05 数据渲染 ===== -->
-    <section id="s5" class="spec max-w-6xl mx-auto px-5 py-14">
-      <div class="grid lg:grid-cols-[1fr_1.25fr] gap-8 items-start" data-reveal>
+    <section id="s5" class="spec max-w-6xl mx-auto px-5 py-14" style="--accent:#4ade80">
+      <div class="grid lg:grid-cols-[1.25fr_1fr] gap-8 items-start" data-reveal>
         <div>
           <p class="eyebrow mb-3">Data · 数据层</p>
           <div class="flex items-center gap-4 mb-3"><span class="specnum">05</span><span class="tag-p0">P0</span></div>
@@ -530,32 +604,49 @@
           </p>
           <p class="leading-relaxed" style="color:var(--mut)">左边动数据（增 / 删），右边的卡片会即时重渲染。这就是 Vue 的响应式。</p>
         </div>
-        <div class="demo" id="vue-data" v-cloak>
+        <div class="demo lg:order-first" id="vue-data" v-cloak>
           <div class="demo-bar"><span class="dot3" style="background:var(--red)"></span><span class="dot3" style="background:var(--amber)"></span><span class="dot3" style="background:var(--green)"></span><span class="mono text-xs ml-2" style="color:var(--mut)">v-for · {{ list.length }} 条数据</span></div>
-          <div class="p-5 grid sm:grid-cols-[.85fr_1.15fr] gap-5">
+          <!-- 统计条：随增删 / 排序即时重算（computed 衍生数据） -->
+          <div class="px-5 pt-4 flex items-center gap-2.5 flex-wrap">
+            <span class="statpill"><span class="num">{{ displayCount }}</span><span class="lbl">条</span></span>
+            <span class="statpill"><span class="num">{{ displayHeat }}</span><span class="lbl">平均热度</span></span>
+            <span class="statpill"><span class="num">{{ displayEmploy }}<span style="font-size:.7rem">%</span></span><span class="lbl">平均就业率</span></span>
+            <button @click="toggleSort" class="sortbtn ml-auto inline-flex items-center gap-1.5" :class="{on: sortByHeat}" :aria-pressed="sortByHeat ? 'true' : 'false'">
+              <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16m0 0-3-3m3 3 3-3M17 20V4m0 0-3 3m3-3 3 3"/></svg>按热度排序
+            </button>
+          </div>
+          <div class="p-5 grid sm:grid-cols-[.92fr_1.08fr] gap-5">
             <div>
-              <p class="mono text-xs mb-2" style="color:var(--mut)">data （可编辑）</p>
+              <p class="mono text-xs mb-2" style="color:var(--mut)">data （可编辑 · {{ list.length }} 行）</p>
               <div class="space-y-2 mb-3">
-                <div v-for="(m,i) in list" :key="m.id" class="flex items-center gap-2 text-sm rounded-lg px-3 py-2" style="background:#0a0e1a;border:1px solid var(--line)">
+                <div v-for="(m,i) in list" :key="m.id" class="data-row flex items-center gap-2 text-sm rounded-lg px-3 py-2" style="background:#0a0e1a;border:1px solid var(--line)">
                   <span class="w-2.5 h-2.5 rounded-full shrink-0" :style="{background:m.color}"></span>
                   <span class="truncate">{{ m.name }}</span>
-                  <button @click="remove(i)" class="ml-auto text-xs" style="color:var(--red)" :aria-label="'删除'+m.name">✕</button>
+                  <span class="mono shrink-0 inline-flex items-center gap-0.5" style="font-size:.66rem;color:var(--cyan)"><svg class="ico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 23a7 7 0 0 0 7-7c0-3-2-5.4-4-7.9-.5 1.6-1.5 2.6-2.6 2.6.1-2.1.4-4.2-2.4-7.7C9 6 8 8.6 6.6 10.6 5.6 12 5 13.9 5 16a7 7 0 0 0 7 7Z"/></svg>{{ m.heat }}</span>
+                  <button @click="remove(i)" class="ml-1 text-xs shrink-0" style="color:var(--red)" :aria-label="'删除'+m.name">✕</button>
                 </div>
               </div>
               <button @click="add" class="btn btn-ghost w-full text-sm">＋ 随机添加一条</button>
             </div>
             <div>
-              <p class="mono text-xs mb-2" style="color:var(--mut)">渲染结果</p>
-              <transition-group tag="div" name="vfade" class="grid grid-cols-2 gap-3">
-                <div v-for="m in list" :key="m.id" class="vcard">
+              <p class="mono text-xs mb-2" style="color:var(--mut)">渲染结果（数据一变即重渲染）</p>
+              <transition-group tag="div" name="vfade" appear class="grid grid-cols-2 gap-3">
+                <div v-for="(m,idx) in list" :key="m.id" class="vcard" :style="{'--vd':(Math.min(idx,8)*40)+'ms'}">
                   <div class="aspect-[16/9] relative">
-                    <div class="absolute inset-0" :style="{background:'linear-gradient(135deg,'+m.color+'40,#0a0e1a)'}"></div>
+                    <div class="absolute inset-0 grid place-items-center" :style="{background:'linear-gradient(135deg,'+m.color+'40,#0a0e1a)'}">
+                      <span class="display font-bold" :style="{color:m.color,opacity:.32,fontSize:'2rem'}">{{ m.name.charAt(0) }}</span>
+                    </div>
                     <img :src="'/assets/majors/'+m.name+'.jpg'" :alt="m.name" class="absolute inset-0 w-full h-full object-cover" loading="lazy" onerror="this.style.display='none'">
+                    <span class="rating absolute top-1.5 right-1.5" :style="{color:m.color}">{{ m.rating }}</span>
                     <div class="absolute inset-x-0 bottom-0 h-1" :style="{background:m.color}"></div>
                   </div>
                   <div class="p-2.5">
                     <p class="font-semibold text-sm truncate">{{ m.name }}</p>
-                    <p class="vchip inline-block mt-1" :style="{color:m.color,borderColor:m.color+'66'}">{{ m.cat }}</p>
+                    <div class="flex items-center justify-between mt-1 mb-1.5">
+                      <p class="vchip inline-block" :style="{color:m.color,borderColor:m.color+'66'}">{{ m.cat }}</p>
+                      <span class="mono" style="font-size:.64rem;color:var(--mut)">就业 {{ m.employ }}%</span>
+                    </div>
+                    <div class="heatbar"><i :style="{transform:'scaleX('+(m.heat/100)+')',background:'linear-gradient(90deg,'+m.color+',var(--cyan))'}"></i></div>
                   </div>
                 </div>
               </transition-group>
@@ -566,7 +657,7 @@
     </section>
 
     <!-- ===== 06 搜索筛选 ===== -->
-    <section id="s6" class="spec max-w-6xl mx-auto px-5 py-14">
+    <section id="s6" class="spec max-w-6xl mx-auto px-5 py-14" style="--accent:#fb7185">
       <div class="grid lg:grid-cols-[1fr_1.25fr] gap-8 items-start" data-reveal>
         <div>
           <p class="eyebrow mb-3">Experience · 体验层</p>
@@ -581,19 +672,34 @@
         <div class="demo" id="vue-filter" v-cloak>
           <div class="demo-bar"><span class="dot3" style="background:var(--red)"></span><span class="dot3" style="background:var(--amber)"></span><span class="dot3" style="background:var(--green)"></span><span class="mono text-xs ml-2" style="color:var(--cyan)">{{ filtered.length }} / {{ all.length }} 条匹配</span></div>
           <div class="p-5">
-            <input v-model="q" class="field mb-3" placeholder="🔍 搜专业名 / 拼音关键词，如「计算机」「医」…" aria-label="搜索专业">
-            <div class="flex gap-2 flex-wrap mb-5">
+            <div class="relative mb-3">
+              <svg class="ico absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style="color:var(--mut)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>
+              <input v-model="q" class="field" style="padding-left:2.5rem" placeholder="搜专业名 / 方向关键词，如「计算机」「医」「AI」…" aria-label="搜索专业">
+            </div>
+            <div class="flex gap-2 flex-wrap mb-3">
               <button v-for="c in cats" :key="c" @click="cat=c" class="vtab" :class="{on: cat===c}">{{ c }}</button>
             </div>
-            <transition-group tag="div" name="vfade" class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              <a v-for="m in filtered" :key="m.name" :href="'/'+m.name+'.html'" class="vcard block">
+            <div class="flex items-center gap-2 flex-wrap mb-5">
+              <span class="mono" style="font-size:.66rem;color:var(--mut)">排序</span>
+              <button v-for="s in sorts" :key="s" @click="sort=s" class="sortbtn" :class="{on: sort===s}">{{ s }}</button>
+            </div>
+            <transition-group tag="div" name="vfade" appear class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <a v-for="(m,idx) in filtered" :key="m.name" :href="'/'+m.name+'.html'" class="vcard block" :style="{'--vd':(Math.min(idx,9)*30)+'ms'}">
                 <div class="aspect-[4/3] relative">
-                  <div class="absolute inset-0" :style="{background:'linear-gradient(135deg,'+m.color+'33,#0a0e1a)'}"></div>
+                  <div class="absolute inset-0 grid place-items-center" :style="{background:'linear-gradient(135deg,'+m.color+'33,#0a0e1a)'}">
+                    <span class="display font-bold" :style="{color:m.color,opacity:.3,fontSize:'1.7rem'}">{{ m.name.charAt(0) }}</span>
+                  </div>
                   <img :src="'/assets/majors/'+m.name+'.jpg'" :alt="m.name" class="absolute inset-0 w-full h-full object-cover" loading="lazy" onerror="this.style.display='none'">
+                  <span class="rating absolute top-1.5 right-1.5" :style="{color:m.color}">{{ m.rating }}</span>
+                  <span class="absolute bottom-1.5 left-1.5 mono px-1.5 py-0.5 rounded inline-flex items-center gap-0.5" style="font-size:.6rem;color:#fff;background:rgba(8,11,20,.7)"><svg class="ico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 23a7 7 0 0 0 7-7c0-3-2-5.4-4-7.9-.5 1.6-1.5 2.6-2.6 2.6.1-2.1.4-4.2-2.4-7.7C9 6 8 8.6 6.6 10.6 5.6 12 5 13.9 5 16a7 7 0 0 0 7 7Z"/></svg>{{ m.heat }}</span>
                 </div>
                 <div class="p-2.5">
                   <p class="font-semibold text-xs truncate">{{ m.name }}</p>
-                  <p class="vchip inline-block mt-1" :style="{color:m.color,borderColor:m.color+'66'}">{{ m.cat }}</p>
+                  <p class="truncate mt-0.5" style="font-size:.64rem;color:var(--mut)">{{ m.tag }}</p>
+                  <div class="flex items-center justify-between mt-1.5">
+                    <p class="vchip inline-block" :style="{color:m.color,borderColor:m.color+'66'}">{{ m.cat }}</p>
+                    <span class="mono" style="font-size:.6rem;color:var(--mut)">就业{{ m.employ }}%</span>
+                  </div>
                 </div>
               </a>
             </transition-group>
@@ -606,11 +712,24 @@
   </main>
 
   <footer class="border-t py-10 text-center text-xs" style="border-color:var(--line);color:var(--mut)">
-    <p class="mb-2">网页能力规格书 · 6 项 P0 能力的可视化演示 · <a href="/" style="color:var(--dim)">返回专业总览</a> · <a href="/studio/" style="color:var(--dim)">打开 Studio</a></p>
+    <p class="mb-2">网页拆解 · 6 项 P0 能力的可视化演示 · <a href="/" style="color:var(--dim)">返回专业总览</a> · <a href="/studio/" style="color:var(--dim)">打开 Studio</a></p>
     © 2026 · 由 campus-page-generator 自动生成 · Vue 3 驱动路由 / 数据 / 筛选演示
   </footer>
 
   <div id="toast" class="toast"></div>
+
+  <!-- 水墨涟漪：Three.js（~600KB）体积大且纯装饰 —— 不阻塞首屏，等页面 load 后的空闲时段再拉；
+       系统真实要求减少动画时（window.__reduceMotion）则完全不加载。容错降级，绝不影响内容。 -->
+  <script>
+    (function(){
+      if (window.__reduceMotion) return;
+      function load(src, cb){ var s=document.createElement('script'); s.src=src; s.onload=cb||null; s.onerror=cb||null; (document.body||document.head).appendChild(s); }
+      function boot(){ load('./three.min.js', function(){ load('./ink-ripple.js'); }); }
+      var ric = window.requestIdleCallback || function(fn){ return setTimeout(fn, 1200); };
+      if (document.readyState === 'complete') ric(boot);
+      else window.addEventListener('load', function(){ ric(boot); });
+    })();
+  </script>
 
   <script src="./vue.global.prod.js"></script>
   <script src="./skills.js"></script>

@@ -133,9 +133,21 @@ try {
     });
 
     // 3.1 生成总览首页 index.html（悬浮 3D 倾斜卡片 + 专属图 + 缺图优雅降级）
+    // 为每个专业拼一条「完整多页 + 多功能小站」的生成指令，供画廊卡片一键带到 Studio 复现
+    const studioPrompt = (m) => [
+      `为「${m.name}」专业（${m.department}）做一个完整的招生招新小站，多页面互链 + 多功能交互：`,
+      `① 首页：英雄区 + 专业一句话定位 + 亮点卡片 + 图片轮播；`,
+      `② 培养方案：课程体系时间线 + 核心课程选项卡 / 手风琴；`,
+      `③ 就业前景：薪资 / 对口率等数据可视化图表 + 代表岗位；`,
+      `④ 师资与实验室：导师卡片网格 + 实验室相册；`,
+      `⑤ 在线报名：带实时校验的表单（姓名 / 手机号 / 邮箱）。`,
+      `顶部导航在各页之间切换，整体深色科技质感、主色 ${m.themeColor}，响应式适配手机，`,
+      `含滚动揭示与悬停微交互，注重无障碍与对比度。`,
+    ].join("");
+
     const cards = majorsData.map((m, i) => `
         <article class="tilt-card" data-color="${m.themeColor}">
-          <a class="tilt-link" href="${m.name}.html" aria-label="${m.name}（${m.department}）">
+          <a class="tilt-link" href="${m.name}.html" aria-label="${m.name}（${m.department}）查看示例页">
             <div class="tilt-inner">
               <div class="tilt-fallback" aria-hidden="true" style="background:linear-gradient(145deg, ${m.themeColor}, #0a0a0a)"></div>
               <img class="tilt-img" src="assets/majors/${m.name}.jpg" alt="${m.name}专业主题图" width="900" height="1200" decoding="async" ${i < 4 ? 'fetchpriority="high"' : 'loading="lazy"'} onerror="this.style.display='none'">
@@ -148,6 +160,7 @@ try {
               </div>
             </div>
           </a>
+          <a class="studio-cta" href="/studio/?prompt=${encodeURIComponent(studioPrompt(m))}" title="在 Studio 现场生成「${m.name}」的完整多页小站" aria-label="在 Studio 复现 ${m.name} 的完整多页小站">⚡ 在 Studio 复现</a>
         </article>`).join('');
 
     // 轨道英雄只用「有图」的专业，保证环绕的都是电影级真图（避免色块混入）
@@ -296,10 +309,24 @@ try {
     @media(min-width:1024px){ .grid3d{ grid-template-columns:repeat(3,1fr); } }
     @media(min-width:1280px){ .grid3d{ grid-template-columns:repeat(4,1fr); } }
 
-    .tilt-card { display:block; perspective:900px; aspect-ratio:3/4; }
+    .tilt-card { position:relative; display:block; perspective:900px; aspect-ratio:3/4; }
     /* JS 可用时预隐藏卡片，等 ScrollTrigger 揭示——避免 GSAP 接管前先闪出再被藏起来（FOUC）。
        若 JS/GSAP 未运行则无 .js-anim，卡片照常显示，绝不会空白。 */
     html.js-anim .tilt-card { visibility: hidden; }
+
+    /* 「在 Studio 复现」：浮在卡片右上角的对应入口，hover/聚焦时浮现，触屏常显。
+       点它 → 跳到 Studio 并预填该专业的完整多页小站指令（范例 ↔ Studio 指令的对应关系）。 */
+    .studio-cta { position:absolute; top:.7rem; right:.7rem; z-index:6;
+      display:inline-flex; align-items:center; gap:.3rem; min-height:36px;
+      font-size:.72rem; font-weight:600; line-height:1; padding:.45rem .7rem; border-radius:999px;
+      color:#fff; text-decoration:none; background:rgba(9,9,11,.72); border:1px solid rgba(255,255,255,.18);
+      -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
+      opacity:0; transform:translateY(-6px); pointer-events:none;
+      transition:opacity .25s ease, transform .25s ease, background .2s, border-color .2s; }
+    .tilt-card:hover .studio-cta, .tilt-card:focus-within .studio-cta { opacity:1; transform:none; pointer-events:auto; }
+    .studio-cta:hover { background:rgba(99,102,241,.92); border-color:rgba(129,140,248,.85); }
+    .studio-cta:focus-visible { opacity:1; transform:none; pointer-events:auto; outline:2px solid var(--accent); outline-offset:2px; }
+    @media (hover:none){ .studio-cta{ opacity:1; transform:none; pointer-events:auto; } }
     .tilt-link { display:block; width:100%; height:100%; text-decoration:none; border-radius:1.25rem; }
     .tilt-link:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
     .tilt-inner {
@@ -477,14 +504,14 @@ try {
       </button>
       <nav id="main-nav" aria-label="站点功能导航" class="hidden md:flex items-center gap-3 text-xs">
         <a href="examples.html" class="btn-link px-3 py-1.5 rounded-full border border-zinc-700 hover:border-zinc-500 text-zinc-100 font-bold transition whitespace-nowrap">示例画廊</a>
-        <a href="/skills/" class="btn-link px-3 py-1.5 rounded-full border border-zinc-700 hover:border-zinc-500 text-zinc-100 font-bold transition whitespace-nowrap">🧩 互动演示</a>
+        <a href="/skills/" class="btn-link px-3 py-1.5 rounded-full border border-zinc-700 hover:border-zinc-500 text-zinc-100 font-bold transition whitespace-nowrap">🧩 网页拆解</a>
         <a href="/studio/" class="btn-link px-3 py-1.5 rounded-full bg-indigo-500 hover:bg-indigo-400 text-white font-bold transition whitespace-nowrap">⚡ 开始生成</a>
       </nav>
     </div>
     <!-- 移动端下拉菜单 -->
     <nav id="mobile-nav" class="hidden md:hidden flex-col gap-2 px-6 pb-4 bg-zinc-950/95 border-b border-zinc-900 text-xs" aria-label="移动端导航">
       <a href="examples.html" class="block px-4 py-3 rounded-xl hover:bg-zinc-800 transition font-bold">示例画廊</a>
-      <a href="/skills/" class="block px-4 py-3 rounded-xl hover:bg-zinc-800 transition font-bold">🧩 互动演示</a>
+      <a href="/skills/" class="block px-4 py-3 rounded-xl hover:bg-zinc-800 transition font-bold">🧩 网页拆解</a>
       <a href="/studio/" class="block px-4 py-3 rounded-xl bg-indigo-500 text-white font-bold transition">⚡ 开始生成</a>
     </nav>
   </header>
@@ -508,7 +535,7 @@ try {
   </section>
 
   <footer class="border-t border-zinc-900 py-10 text-center text-zinc-600 text-sm">
-    <p class="mb-2">用一句话生成网页 · <a href="/studio/" class="text-zinc-400 hover:text-indigo-400 transition">打开 Studio</a> · <a href="/skills/" class="text-zinc-400 hover:text-indigo-400 transition">互动演示</a></p>
+    <p class="mb-2">用一句话生成网页 · <a href="/studio/" class="text-zinc-400 hover:text-indigo-400 transition">打开 Studio</a> · <a href="/skills/" class="text-zinc-400 hover:text-indigo-400 transition">网页拆解</a></p>
     © 2026 · 由 campus-page-generator 自动生成
   </footer>
 
@@ -997,10 +1024,24 @@ try {
     @media(min-width:1024px){ .grid3d{ grid-template-columns:repeat(3,1fr); } }
     @media(min-width:1280px){ .grid3d{ grid-template-columns:repeat(4,1fr); } }
 
-    .tilt-card { display:block; perspective:900px; aspect-ratio:3/4; }
+    .tilt-card { position:relative; display:block; perspective:900px; aspect-ratio:3/4; }
     /* JS 可用时预隐藏卡片，等 ScrollTrigger 揭示——避免 GSAP 接管前先闪出再被藏起来（FOUC）。
        若 JS/GSAP 未运行则无 .js-anim，卡片照常显示，绝不会空白。 */
     html.js-anim .tilt-card { visibility: hidden; }
+
+    /* 「在 Studio 复现」：浮在卡片右上角的对应入口，hover/聚焦时浮现，触屏常显。
+       点它 → 跳到 Studio 并预填该专业的完整多页小站指令（范例 ↔ Studio 指令的对应关系）。 */
+    .studio-cta { position:absolute; top:.7rem; right:.7rem; z-index:6;
+      display:inline-flex; align-items:center; gap:.3rem; min-height:36px;
+      font-size:.72rem; font-weight:600; line-height:1; padding:.45rem .7rem; border-radius:999px;
+      color:#fff; text-decoration:none; background:rgba(9,9,11,.72); border:1px solid rgba(255,255,255,.18);
+      -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
+      opacity:0; transform:translateY(-6px); pointer-events:none;
+      transition:opacity .25s ease, transform .25s ease, background .2s, border-color .2s; }
+    .tilt-card:hover .studio-cta, .tilt-card:focus-within .studio-cta { opacity:1; transform:none; pointer-events:auto; }
+    .studio-cta:hover { background:rgba(99,102,241,.92); border-color:rgba(129,140,248,.85); }
+    .studio-cta:focus-visible { opacity:1; transform:none; pointer-events:auto; outline:2px solid var(--accent); outline-offset:2px; }
+    @media (hover:none){ .studio-cta{ opacity:1; transform:none; pointer-events:auto; } }
     .tilt-link { display:block; width:100%; height:100%; text-decoration:none; border-radius:1.25rem; }
     .tilt-link:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
     .tilt-inner {
@@ -1064,13 +1105,13 @@ try {
       </button>
       <nav id="main-nav" aria-label="站点功能导航" class="hidden md:flex items-center gap-3 text-xs">
         <a href="/" class="btn-link px-3 py-1.5 rounded-full border border-zinc-700 hover:border-zinc-500 text-zinc-100 font-bold transition whitespace-nowrap">← 首页</a>
-        <a href="/skills/" class="btn-link px-3 py-1.5 rounded-full border border-zinc-700 hover:border-zinc-500 text-zinc-100 font-bold transition whitespace-nowrap">🧩 互动演示</a>
+        <a href="/skills/" class="btn-link px-3 py-1.5 rounded-full border border-zinc-700 hover:border-zinc-500 text-zinc-100 font-bold transition whitespace-nowrap">🧩 网页拆解</a>
         <a href="/studio/" class="btn-link px-3 py-1.5 rounded-full bg-indigo-500 hover:bg-indigo-400 text-white font-bold transition whitespace-nowrap">⚡ 开始生成</a>
       </nav>
     </div>
     <nav id="mobile-nav" class="hidden md:hidden flex-col gap-2 px-6 pb-4 bg-zinc-950/95 border-b border-zinc-900 text-xs" aria-label="移动端导航">
       <a href="/" class="block px-4 py-3 rounded-xl hover:bg-zinc-800 transition font-bold">← 首页</a>
-      <a href="/skills/" class="block px-4 py-3 rounded-xl hover:bg-zinc-800 transition font-bold">🧩 互动演示</a>
+      <a href="/skills/" class="block px-4 py-3 rounded-xl hover:bg-zinc-800 transition font-bold">🧩 网页拆解</a>
       <a href="/studio/" class="block px-4 py-3 rounded-xl bg-indigo-500 text-white font-bold transition">⚡ 开始生成</a>
     </nav>
   </header>
@@ -1095,7 +1136,7 @@ try {
   <section id="main-content" class="section-wrap" style="padding-top:2rem">
     <p class="eyebrow">Examples · 示例画廊</p>
     <h2 class="section-title">点开任意一张，看完整的生成效果</h2>
-    <p class="section-sub">下面每个页面都是一个 AI 生成的示例成品——轮播、选项卡、手风琴、表单校验、留言板等交互全部内置。点击卡片进去亲手玩一玩，就知道生成器能产出什么质感的页面。</p>
+    <p class="section-sub">下面每张卡都对应一个 AI 生成的示例成品——轮播、选项卡、手风琴、表单校验等交互全部内置。<strong style="color:var(--text)">点卡片</strong>看现成的单页示例；想要更完整的，把鼠标移到卡片上点右上角 <strong style="color:#a5b4fc">⚡ 在 Studio 复现</strong>，会带着这套专业的「完整多页 + 多功能小站」指令跳到 Studio，一键现场生成同款。</p>
     <div class="grid3d mt-12" id="cards-grid">${cards}</div>
     <p id="no-results" class="hidden text-center text-zinc-600 py-12">没有匹配的专业，试试其他关键词</p>
   </section>

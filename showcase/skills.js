@@ -1,5 +1,5 @@
 /* ============================================================
-   网页能力规格书 —— 6 项能力的可视化演示逻辑
+   网页拆解 —— 6 项能力的可视化演示逻辑
    01~03 原生 JS / 04~06 真正的 Vue 3（本地 vendor，规避国内 CDN）
    ============================================================ */
 (function () {
@@ -50,6 +50,9 @@
       navUl.appendChild(ink);
       links = Array.prototype.slice.call(navUl.querySelectorAll('.snav'));
     }
+    // 六节配色身份：游标 / 当前序号随所在能力节换色
+    var ACC = { s1: '#5b8cff', s2: '#34e3d4', s3: '#ffb454', s4: '#a78bfa', s5: '#4ade80', s6: '#fb7185' };
+    function hexA(hex, a) { var n = parseInt(hex.slice(1), 16); return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')'; }
     function moveInk() {
       if (!ink || !links.length) return;
       var a = navUl.querySelector('.snav.active') || links[0];
@@ -59,6 +62,14 @@
       ink.style.height = a.offsetHeight + 'px';
       // 用 offsetLeft/Top（相对定位的 ul），横向滚动时游标随内容一起滚，不会错位
       ink.style.transform = 'translate(' + a.offsetLeft + 'px,' + a.offsetTop + 'px)';
+      var col = ACC[a.getAttribute('data-sec')] || '#5b8cff';
+      ink.style.background = hexA(col, 0.15);
+      ink.style.borderColor = hexA(col, 0.5);
+      ink.style.boxShadow = '0 0 16px ' + hexA(col, 0.28);
+      links.forEach(function (l) {
+        var n = l.querySelector('.n'); if (!n) return;
+        n.style.color = l.classList.contains('active') ? (ACC[l.getAttribute('data-sec')] || '') : '';
+      });
     }
     // scroll-spy 在别处切换 .active —— 用 MutationObserver 跟随，无需轮询
     if (navUl) {
@@ -76,7 +87,7 @@
         var h = document.documentElement;
         var st = window.pageYOffset || h.scrollTop || 0;
         var max = h.scrollHeight - h.clientHeight;
-        bar.style.width = (max > 0 ? (st / max * 100) : 0) + '%';
+        bar.style.transform = 'scaleX(' + (max > 0 ? (st / max) : 0) + ')';
         var vh = window.innerHeight;
         for (var i = 0; i < specnums.length; i++) {
           var r = specnums[i].getBoundingClientRect();
@@ -103,20 +114,7 @@
     }, { threshold: 0.35 });
     document.querySelectorAll('section.spec').forEach(function (s) { spy2.observe(s); });
 
-    // 交互光斑：跟随鼠标的柔光，点亮蓝图栅格附近区域（桌面端，细指针才启用）
-    if (window.matchMedia && window.matchMedia('(pointer:fine)').matches) {
-      var spot = document.createElement('div');
-      spot.id = 'cursor-spot';
-      spot.setAttribute('aria-hidden', 'true');
-      document.body.appendChild(spot);
-      var sx = 0, sy = 0, moved = false;
-      window.addEventListener('mousemove', function (ev) {
-        sx = ev.clientX; sy = ev.clientY;
-        if (!moved) { moved = true; spot.style.opacity = '1'; }
-        spot.style.transform = 'translate(' + (sx - 200) + 'px,' + (sy - 200) + 'px)';
-      }, { passive: true });
-      window.addEventListener('mouseleave', function () { spot.style.opacity = '0'; });
-    }
+    // 注：原「交互光斑」柔光层已由 ink-ripple.js 的水墨涟漪取代（鼠标跟随效果更强），此处不再创建。
   })();
 
   /* ---------- 通用：浮层提示 ---------- */
@@ -268,7 +266,7 @@
     var range = document.getElementById('drag-range');
     if (range) {
       var dVal = document.getElementById('drag-val'), dBar = document.getElementById('drag-bar');
-      range.addEventListener('input', function () { dVal.textContent = range.value; dBar.style.width = range.value + '%'; });
+      range.addEventListener('input', function () { dVal.textContent = range.value; dBar.style.transform = 'scaleX(' + (range.value / 100) + ')'; });
     }
 
     /* ① 动态建 DOM：createElement / appendChild / remove */
@@ -339,7 +337,7 @@
         var pct = [0, 30, 55, 80, 100][score];
         var col = ['', '#fb7185', '#ffb454', '#5b8cff', '#4ade80'][score];
         var label = ['', '弱', '一般', '较强', '很强'][score];
-        if (pbar) { pbar.style.width = pct + '%'; pbar.style.background = col || 'var(--blue)'; }
+        if (pbar) { pbar.style.transform = 'scaleX(' + (pct / 100) + ')'; pbar.style.background = col || 'var(--blue)'; }
         var ok = score >= 2;
         pwd.classList.toggle('ok', ok); pwd.classList.toggle('err', v.length > 0 && !ok);
         if (pmsg) { pmsg.textContent = v ? '强度：' + label : ''; pmsg.className = 'vmsg ' + (ok ? 'ok' : 'err'); }
@@ -354,31 +352,42 @@
     if (disp) {
       var TOTAL = 30, left = TOTAL, handle = null;
       function fmt(s) { var m = Math.floor(s / 60), x = s % 60; return (m < 10 ? '0' : '') + m + ':' + (x < 10 ? '0' : '') + x; }
-      function paint() { disp.textContent = fmt(left); if (tBar) tBar.style.width = (left / TOTAL * 100) + '%'; }
+      function paint() { disp.textContent = fmt(left); if (tBar) tBar.style.transform = 'scaleX(' + (left / TOTAL) + ')'; }
       function tick() { if (left <= 0) { clearInterval(handle); handle = null; toast('倒计时结束 ⏰'); return; } left--; paint(); }
       document.getElementById('t-start').addEventListener('click', function () { if (handle || left <= 0) return; handle = setInterval(tick, 1000); });
       document.getElementById('t-pause').addEventListener('click', function () { clearInterval(handle); handle = null; });
       document.getElementById('t-reset').addEventListener('click', function () { clearInterval(handle); handle = null; left = TOTAL; paint(); });
       paint();
     }
+    // 实时时钟 / 打字机：离屏（滚出 03 节）时暂停 setInterval / 递归 setTimeout，省电省 CPU
     var clock = document.getElementById('clock-disp');
-    if (clock) {
-      function pad(n) { return (n < 10 ? '0' : '') + n; }
-      function tickClock() { var d = new Date(); clock.textContent = pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()); }
-      tickClock(); setInterval(tickClock, 1000);
-    }
+    var clockTimer = null;
+    function pad2(n) { return (n < 10 ? '0' : '') + n; }
+    function tickClock() { if (!clock) return; var d = new Date(); clock.textContent = pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds()); }
+    function startClock() { if (clock && !clockTimer) { tickClock(); clockTimer = setInterval(tickClock, 1000); } }
+    function stopClock() { if (clockTimer) { clearInterval(clockTimer); clockTimer = null; } }
+
     var tw = document.getElementById('tw');
-    if (tw) {
-      var PHRASES = ['对话即渲染', '一句话生成网页', '原生 JS · 零依赖', 'HTML / CSS / JS'];
-      var ti = 0, ci = 0, del = false;
-      function twTick() {
-        var full = PHRASES[ti];
-        tw.textContent = full.slice(0, ci);
-        if (!del) { ci++; if (ci > full.length) { del = true; setTimeout(twTick, 1100); return; } }
-        else { ci--; if (ci < 0) { del = false; ti = (ti + 1) % PHRASES.length; ci = 0; } }
-        setTimeout(twTick, del ? 45 : 110);
-      }
-      twTick();
+    var TW_PHRASES = ['对话即渲染', '一句话生成网页', '原生 JS · 零依赖', 'HTML / CSS / JS'];
+    var twi = 0, twc = 0, twDel = false, twActive = false;
+    function twTick() {
+      if (!tw || !twActive) return;
+      var full = TW_PHRASES[twi];
+      tw.textContent = full.slice(0, twc);
+      if (!twDel) { twc++; if (twc > full.length) { twDel = true; setTimeout(twTick, 1100); return; } }
+      else { twc--; if (twc < 0) { twDel = false; twi = (twi + 1) % TW_PHRASES.length; twc = 0; } }
+      setTimeout(twTick, twDel ? 45 : 110);
+    }
+    function startTw() { if (tw && !twActive) { twActive = true; twTick(); } }
+    function stopTw() { twActive = false; }
+
+    startClock(); startTw();
+    var sec3 = document.getElementById('s3');
+    if (sec3 && 'IntersectionObserver' in window) {
+      new IntersectionObserver(function (es) {
+        if (es[0].isIntersecting) { startClock(); startTw(); }
+        else { stopClock(); stopTw(); }
+      }, { threshold: 0 }).observe(sec3);
     }
 
     /* ④ 待办清单（localStorage 持久化：JSON.stringify / parse） */
@@ -421,28 +430,61 @@
      ============================================================ */
   if (!window.Vue) { console.warn('Vue 未加载，04~06 演示降级'); return; }
   var createApp = Vue.createApp, ref = Vue.ref, reactive = Vue.reactive,
-      computed = Vue.computed, onMounted = Vue.onMounted, onUnmounted = Vue.onUnmounted;
+      computed = Vue.computed, watch = Vue.watch, onMounted = Vue.onMounted, onUnmounted = Vue.onUnmounted;
 
-  /* 共享数据集（取站点里确有配图的专业，搜索/渲染都用它） */
+  /* 数字滚动：监听一个数值源，用 rAF 缓动到新值（用于 05 的统计胶囊 count-up） */
+  function tweenedNumber(src) {
+    var out = ref(0);
+    var nowms = function () { return (window.performance && performance.now) ? performance.now() : Date.now(); };
+    watch(src, function (nv) {
+      if (window.__reduceMotion) { out.value = nv | 0; return; }   // 无障碍：不滚动，直接落定
+      var from = out.value, to = nv | 0, t0 = nowms(), dur = 620;
+      (function frame() {
+        var p = Math.min((nowms() - t0) / dur, 1);
+        var e = 1 - Math.pow(1 - p, 3);
+        out.value = Math.round(from + (to - from) * e);
+        if (p < 1) requestAnimationFrame(frame);
+      })();
+    }, { immediate: true });
+    return out;
+  }
+
+  /* 共享数据集（取站点里确有配图的专业）。
+     字段从「名/类/色」扩到「报考热度 / 就业率 / 学制 / 学科评级 / 一句话」——
+     让 05 渲染、06 筛选都能玩出多维度（排序、统计、徽标）。 */
   var MAJORS = [
-    { name: '计算机类',   cat: '工学', color: '#5b8cff' },
-    { name: '电子信息类', cat: '工学', color: '#38bdf8' },
-    { name: '机械类',     cat: '工学', color: '#f59e0b' },
-    { name: '自动化类',   cat: '工学', color: '#22d3ee' },
-    { name: '数学类',     cat: '理学', color: '#34e3d4' },
-    { name: '物理学类',   cat: '理学', color: '#818cf8' },
-    { name: '化学类',     cat: '理学', color: '#2dd4bf' },
-    { name: '金融学类',   cat: '经管', color: '#fbbf24' },
-    { name: '经济学类',   cat: '经管', color: '#f472b6' },
-    { name: '工商管理类', cat: '经管', color: '#fb923c' },
-    { name: '法学类',     cat: '人文', color: '#a78bfa' },
-    { name: '哲学类',     cat: '人文', color: '#94a3b8' },
-    { name: '新闻传播学类', cat: '人文', color: '#60a5fa' },
-    { name: '临床医学类', cat: '医学', color: '#fb7185' },
-    { name: '护理学类',   cat: '医学', color: '#f87171' },
-    { name: '设计学类',   cat: '艺术', color: '#f0abfc' },
-    { name: '美术学类',   cat: '艺术', color: '#c084fc' },
-    { name: '音乐与舞蹈学类', cat: '艺术', color: '#e879f9' }
+    { name: '计算机类',     cat: '工学', color: '#5b8cff', heat: 96, employ: 96, years: 4, rating: 'A+', tag: '算法 · 系统 · AI' },
+    { name: '电子信息类',   cat: '工学', color: '#38bdf8', heat: 90, employ: 94, years: 4, rating: 'A',  tag: '芯片 · 通信 · 嵌入式' },
+    { name: '自动化类',     cat: '工学', color: '#22d3ee', heat: 83, employ: 94, years: 4, rating: 'A',  tag: '控制 · 机器人' },
+    { name: '电气类',       cat: '工学', color: '#60a5fa', heat: 80, employ: 95, years: 4, rating: 'A',  tag: '电网 · 新能源' },
+    { name: '机械类',       cat: '工学', color: '#f59e0b', heat: 76, employ: 93, years: 4, rating: 'A-', tag: '智造 · 机电' },
+    { name: '土木类',       cat: '工学', color: '#fb923c', heat: 64, employ: 90, years: 4, rating: 'B+', tag: '结构 · 基建' },
+    { name: '材料类',       cat: '工学', color: '#fbbf24', heat: 66, employ: 89, years: 4, rating: 'B+', tag: '新材料 · 半导体' },
+    { name: '能源动力类',   cat: '工学', color: '#facc15', heat: 63, employ: 91, years: 4, rating: 'B+', tag: '储能 · 双碳' },
+    { name: '数学类',       cat: '理学', color: '#34e3d4', heat: 78, employ: 88, years: 4, rating: 'A',  tag: '基础学科之王' },
+    { name: '物理学类',     cat: '理学', color: '#818cf8', heat: 73, employ: 87, years: 4, rating: 'A',  tag: '探究万物之理' },
+    { name: '化学类',       cat: '理学', color: '#2dd4bf', heat: 68, employ: 86, years: 4, rating: 'A-', tag: '材料 · 制药基石' },
+    { name: '生物科学类',   cat: '理学', color: '#4ade80', heat: 62, employ: 83, years: 4, rating: 'B+', tag: '生命 · 基因' },
+    { name: '大气科学类',   cat: '理学', color: '#5eead4', heat: 54, employ: 85, years: 4, rating: 'B+', tag: '气象 · 气候' },
+    { name: '金融学类',     cat: '经管', color: '#fbbf24', heat: 89, employ: 90, years: 4, rating: 'A',  tag: '资本 · 风控' },
+    { name: '经济学类',     cat: '经管', color: '#f472b6', heat: 85, employ: 89, years: 4, rating: 'A',  tag: '宏观 · 计量' },
+    { name: '工商管理类',   cat: '经管', color: '#fb923c', heat: 80, employ: 88, years: 4, rating: 'A-', tag: '运营 · 战略' },
+    { name: '管理科学与工程类', cat: '经管', color: '#f59e0b', heat: 74, employ: 90, years: 4, rating: 'A-', tag: '数据 · 决策' },
+    { name: '法学类',       cat: '人文', color: '#a78bfa', heat: 79, employ: 84, years: 4, rating: 'A',  tag: '法律 · 公检法' },
+    { name: '新闻传播学类', cat: '人文', color: '#60a5fa', heat: 72, employ: 83, years: 4, rating: 'A-', tag: '媒体 · 内容' },
+    { name: '外国语言文学类', cat: '人文', color: '#38bdf8', heat: 70, employ: 85, years: 4, rating: 'A-', tag: '语言 · 跨文化' },
+    { name: '中国语言文学类', cat: '人文', color: '#c084fc', heat: 67, employ: 82, years: 4, rating: 'A',  tag: '文学 · 文字' },
+    { name: '历史学类',     cat: '人文', color: '#94a3b8', heat: 52, employ: 80, years: 4, rating: 'B+', tag: '考古 · 史学' },
+    { name: '哲学类',       cat: '人文', color: '#a1a1aa', heat: 48, employ: 80, years: 4, rating: 'B+', tag: '思辨 · 逻辑' },
+    { name: '临床医学类',   cat: '医学', color: '#fb7185', heat: 87, employ: 92, years: 5, rating: 'A+', tag: '救死扶伤 · 5 年制' },
+    { name: '护理学类',     cat: '医学', color: '#f87171', heat: 75, employ: 95, years: 4, rating: 'A-', tag: '高需求 · 缺口大' },
+    { name: '药学类',       cat: '医学', color: '#fda4af', heat: 70, employ: 90, years: 4, rating: 'A',  tag: '新药 · 制剂' },
+    { name: '中医学类',     cat: '医学', color: '#f97316', heat: 66, employ: 87, years: 5, rating: 'A-', tag: '传承 · 5 年制' },
+    { name: '基础医学',     cat: '医学', color: '#fb923c', heat: 60, employ: 88, years: 5, rating: 'A',  tag: '医学科研 · 5 年制' },
+    { name: '设计学类',     cat: '艺术', color: '#f0abfc', heat: 80, employ: 86, years: 4, rating: 'A',  tag: '视觉 · 交互' },
+    { name: '美术学类',     cat: '艺术', color: '#c084fc', heat: 72, employ: 84, years: 4, rating: 'A-', tag: '绘画 · 造型' },
+    { name: '音乐与舞蹈学类', cat: '艺术', color: '#e879f9', heat: 68, employ: 82, years: 4, rating: 'A-', tag: '表演 · 创作' },
+    { name: '艺术学理论类', cat: '艺术', color: '#d8b4fe', heat: 54, employ: 80, years: 4, rating: 'B+', tag: '美学 · 评论' }
   ];
 
   /* ---------- 04 Vue 路由（hash 路由，前进/后退可用） ---------- */
@@ -494,17 +536,38 @@
     if (!el) return;
     createApp({
       setup: function () {
-        var seed = MAJORS.slice(0, 4).map(function (m, i) { return { id: i + 1, name: m.name, cat: m.cat, color: m.color }; });
+        function clone(m, id) { return { id: id, name: m.name, cat: m.cat, color: m.color, heat: m.heat, employ: m.employ, years: m.years, rating: m.rating, tag: m.tag }; }
+        var seed = MAJORS.slice(0, 5).map(function (m, i) { return clone(m, i + 1); });
         var list = reactive(seed);
         var uid = ref(seed.length + 1);
-        var pool = MAJORS.slice(4);
+        var pool = MAJORS.slice(5);
         var pi = 0;
+        var sortByHeat = ref(false);
+        function applySort() {
+          if (sortByHeat.value) list.sort(function (a, b) { return b.heat - a.heat; });
+          else list.sort(function (a, b) { return a.id - b.id; });
+        }
+        function toggleSort() { sortByHeat.value = !sortByHeat.value; applySort(); }
         function add() {
           var m = pool[pi % pool.length]; pi++;
-          list.push({ id: uid.value++, name: m.name, cat: m.cat, color: m.color });
+          list.push(clone(m, uid.value++));
+          applySort();
         }
         function remove(i) { list.splice(i, 1); }
-        return { list: list, add: add, remove: remove };
+        var avgEmploy = computed(function () {
+          if (!list.length) return 0;
+          return Math.round(list.reduce(function (s, m) { return s + m.employ; }, 0) / list.length);
+        });
+        var avgHeat = computed(function () {
+          if (!list.length) return 0;
+          return Math.round(list.reduce(function (s, m) { return s + m.heat; }, 0) / list.length);
+        });
+        var count = computed(function () { return list.length; });
+        return {
+          list: list, add: add, remove: remove, sortByHeat: sortByHeat, toggleSort: toggleSort,
+          avgEmploy: avgEmploy, avgHeat: avgHeat,
+          displayCount: tweenedNumber(count), displayHeat: tweenedNumber(avgHeat), displayEmploy: tweenedNumber(avgEmploy)
+        };
       }
     }).mount(el);
   })();
@@ -519,15 +582,20 @@
         var cats = ['全部', '工学', '理学', '经管', '人文', '医学', '艺术'];
         var q = ref('');
         var cat = ref('全部');
+        var sort = ref('默认');
+        var sorts = ['默认', '热度', '就业率'];
         var filtered = computed(function () {
           var kw = q.value.trim();
-          return all.filter(function (m) {
+          var arr = all.filter(function (m) {
             var okCat = cat.value === '全部' || m.cat === cat.value;
-            var okKw = !kw || m.name.indexOf(kw) !== -1 || m.cat.indexOf(kw) !== -1;
+            var okKw = !kw || m.name.indexOf(kw) !== -1 || m.cat.indexOf(kw) !== -1 || (m.tag && m.tag.indexOf(kw) !== -1);
             return okCat && okKw;
           });
+          if (sort.value === '热度') arr = arr.slice().sort(function (a, b) { return b.heat - a.heat; });
+          else if (sort.value === '就业率') arr = arr.slice().sort(function (a, b) { return b.employ - a.employ; });
+          return arr;
         });
-        return { all: all, cats: cats, q: q, cat: cat, filtered: filtered };
+        return { all: all, cats: cats, q: q, cat: cat, sort: sort, sorts: sorts, filtered: filtered };
       }
     }).mount(el);
   })();

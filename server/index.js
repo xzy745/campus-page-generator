@@ -153,7 +153,7 @@ function startServer(port, remainingRetries = 10) {
     console.log(`\n🚀 统一服务已启动: ${localUrl}`);
     console.log(`   校园专业总览(3D卡片): ${localUrl}  ${distReady ? "" : "⚠ dist 未构建，先跑 npm run build:static"}`);
     console.log(`   AI 对话即渲染 Studio: http://localhost:${actualPort}/studio/`);
-    console.log(`   网页能力规格书(6项能力演示): http://localhost:${actualPort}/skills/`);
+    console.log(`   网页拆解(6项能力演示): http://localhost:${actualPort}/skills/`);
     console.log(`   模型: ${MODEL} ｜ 密钥: ${keyOk ? "已配置 ✓" : "⚠ 未配置（请在 .env 写 DEEPSEEK_API_KEY）"}`);
     console.log(`   📦 数据库: data/users.db + data/generations.db\n`);
     openBrowser(localUrl);

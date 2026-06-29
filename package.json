@@ -10,6 +10,7 @@
     "dev": "node server/index.js",
     "build": "node generator.js",
     "build:static": "node generator.js",
+    "build:skills-css": "tailwindcss -c showcase/tailwind.config.js -i showcase/tailwind.input.css -o showcase/tailwind.css --minify",
     "preview": "node generator.js && node server/index.js"
   },
   "keywords": [
@@ -28,5 +29,8 @@
     "better-sqlite3": "^12.11.1",
     "dotenv": "^16.4.5",
     "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.17"
   }
 }
